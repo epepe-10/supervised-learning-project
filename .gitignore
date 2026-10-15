@@ -1,5 +1,6 @@
 # Course material (not part of the submission)
 *.pdf
+S[0-9]*.pdf
 HW*_SL*.ipynb
 
 # Report: keep LaTeX sources, ignore build artifacts
