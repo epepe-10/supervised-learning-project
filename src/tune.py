@@ -96,8 +96,10 @@ def tune_model(model_name, X_dev, y_dev, n_trials):
         pipeline = build_pipeline(model_name, params)
         # cross_val_score fits a fresh copy of the Pipeline on each training
         # fold, so preprocessing never sees the validation fold (S5).
+        # n_jobs=-1: the 5 folds are trained at the same time on different CPU cores.
         scores = cross_val_score(pipeline, X_dev, y_dev, cv=get_cv_folds(),
-                                 scoring="average_precision")
+                                 scoring="average_precision", n_jobs=-1)
+        print(f"  trial {trial.number}: mean CV AP = {scores.mean():.4f}")
         return scores.mean()
 
     # direction="maximize": a higher Average Precision is better.
