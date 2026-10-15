@@ -19,8 +19,12 @@ from src.features import add_features
 MODEL_NAMES = ["logistic_regression", "random_forest", "lightgbm"]
 
 
-def build_preprocessor():
+def build_preprocessor(use_new_features=True):
     """ColumnTransformer: one preprocessing recipe per type of column (S5)."""
+    numeric_columns = config.NUMERIC_FEATURES
+    if use_new_features:
+        numeric_columns = config.NUMERIC_FEATURES + config.ENGINEERED_FEATURES
+
     # Numerical columns: fill missing values with the TRAINING median, then
     # standardize: x_scaled = (x - mean_train) / std_train.
     numeric_pipeline = Pipeline([
@@ -39,7 +43,7 @@ def build_preprocessor():
 
     # Columns not listed here ("education", "fnlwgt") are dropped (remainder="drop").
     preprocessor = ColumnTransformer([
-        ("num", numeric_pipeline, config.NUMERIC_FEATURES + config.ENGINEERED_FEATURES),
+        ("num", numeric_pipeline, numeric_columns),
         ("cat", categorical_pipeline, config.CATEGORICAL_FEATURES),
     ], remainder="drop")
     return preprocessor
@@ -75,13 +79,18 @@ def build_model(model_name, params=None):
     raise ValueError(f"Unknown model: {model_name}. Choose from {MODEL_NAMES}")
 
 
-def build_pipeline(model_name, params=None):
-    """Full Pipeline. Nothing is fitted here: we only define the steps (S5)."""
-    return Pipeline([
-        # 1. Add the engineered features (stateless, see features.py).
-        ("features", FunctionTransformer(add_features)),
-        # 2. Impute, scale and encode, learned on the training rows only.
-        ("preprocessor", build_preprocessor()),
-        # 3. The classifier.
-        ("model", build_model(model_name, params)),
-    ])
+def build_pipeline(model_name, params=None, use_new_features=True):
+    """Full Pipeline. Nothing is fitted here: we only define the steps (S5).
+
+    use_new_features=False builds the same Pipeline without our engineered
+    features, to measure what feature engineering buys us (baseline.py).
+    """
+    steps = []
+    # 1. Add the engineered features (stateless, see features.py).
+    if use_new_features:
+        steps.append(("features", FunctionTransformer(add_features)))
+    # 2. Impute, scale and encode, learned on the training rows only.
+    steps.append(("preprocessor", build_preprocessor(use_new_features)))
+    # 3. The classifier.
+    steps.append(("model", build_model(model_name, params)))
+    return Pipeline(steps)

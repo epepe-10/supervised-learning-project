@@ -13,6 +13,8 @@ complementary metrics too."
 
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.base import clone
+from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     PrecisionRecallDisplay,
@@ -25,6 +27,39 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+
+from src import config
+
+
+def get_cv_folds():
+    """The 5 stratified folds used everywhere, always the same thanks to the seed (S1)."""
+    return StratifiedKFold(n_splits=config.N_FOLDS, shuffle=True, random_state=config.RANDOM_STATE)
+
+
+def get_oof_probabilities(pipeline, X, y):
+    """5-fold cross-validation that returns the out-of-fold (OOF) probabilities.
+
+    (S5) "Each run: train on four parts, validate on the fifth. Every
+    observation is used for validation exactly once."
+    (S5) "Define the Pipeline before cross-validation, but fit a fresh copy
+    of it inside each CV fold": clone() makes that fresh, unfitted copy, so
+    the imputer, scaler and encoder never see the validation fold.
+
+    Returns:
+        oof_proba:  P(>50K) for every row, predicted by the model that did NOT
+                    train on that row -> honest scores, usable to pick a threshold.
+        fold_scores: Average Precision of each fold, to see how much the score
+                    depends on the split.
+    """
+    oof_proba = np.zeros(len(y))
+    fold_scores = []
+    for train_index, valid_index in get_cv_folds().split(X, y):
+        fold_pipeline = clone(pipeline)
+        fold_pipeline.fit(X.iloc[train_index], y.iloc[train_index])
+        proba = fold_pipeline.predict_proba(X.iloc[valid_index])[:, 1]
+        oof_proba[valid_index] = proba
+        fold_scores.append(average_precision_score(y.iloc[valid_index], proba))
+    return oof_proba, fold_scores
 
 
 def compute_metrics(y_true, y_proba, threshold=0.5):
