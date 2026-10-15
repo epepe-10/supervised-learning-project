@@ -51,6 +51,13 @@ CATEGORICAL_FEATURES = [
     "native-country",
 ]
 
+# Features we create ourselves in features.py (numerical, so scaled like the others).
+ENGINEERED_FEATURES = [
+    "age_squared",
+    "education_x_hours",
+    "has_capital",
+]
+
 # Columns we deliberately do NOT give to the model (justified in eda.py / report):
 #   - "education": same information as "education-num" (one-to-one mapping), and
 #                  correlated predictors make coefficients unstable (S2).
