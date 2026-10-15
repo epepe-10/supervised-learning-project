@@ -22,6 +22,15 @@ RANDOM_STATE = 42    # same seed everywhere -> same split, same folds, same resu
 TEST_SIZE = 0.20     # 80% development set / 20% held-out test set
 N_FOLDS = 5          # 5-fold StratifiedKFold on the development set
 
+# Optuna budget: number of trials (= hyperparameter configurations) per model.
+# Random Forest is the slowest model to fit, so it gets fewer trials.
+N_TRIALS = {
+    "logistic_regression": 25,
+    "random_forest": 20,
+    "lightgbm": 50,
+}
+TUNING_DIR = OUTPUT_DIR / "tuning"
+
 # ---------------------------------------------------------------------------
 # Target
 # ---------------------------------------------------------------------------
