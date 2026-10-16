@@ -27,6 +27,8 @@ def build_preprocessor(use_new_features=True):
 
     # Numerical columns: fill missing values with the TRAINING median, then
     # standardize: x_scaled = (x - mean_train) / std_train.
+    # Adult has no missing numerical values (see eda.py), but the imputer stays
+    # so a new row with a missing number can still be scored at prediction time.
     numeric_pipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
