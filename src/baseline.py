@@ -6,7 +6,8 @@ Everything here uses 5-fold cross-validation on the DEVELOPMENT set only.
 The test set is not touched (S1).
 
     Experiment 1 - Feature engineering: logistic regression with vs without
-                   the new features.
+                   the new features (the "with" version is the
+                   "logistic_regression | no remedy" row of experiment 2).
     Experiment 2 - Model progression: the 3 models with default settings.
     Experiment 3 - Class imbalance: no remedy vs class weights vs threshold
                    tuning, for each model (S6).
@@ -47,12 +48,13 @@ def main():
     # -----------------------------------------------------------------------
     # Experiment 1 - Feature engineering (on the linear model, which needs it)
     # -----------------------------------------------------------------------
+    # Only the version WITHOUT the new features is run here. Every pipeline
+    # below uses them, so the "logistic_regression | no remedy" row is the
+    # version WITH them: no need to train the same model twice.
     print("\nExperiment 1 - Feature engineering")
-    for use_new_features in [False, True]:
-        label = "with" if use_new_features else "without"
-        pipeline = build_pipeline("logistic_regression", use_new_features=use_new_features)
-        row, _ = run_experiment(f"logreg {label} new features", pipeline, X_dev, y_dev)
-        results.append(row)
+    pipeline = build_pipeline("logistic_regression", use_new_features=False)
+    row, _ = run_experiment("logistic_regression | without new features", pipeline, X_dev, y_dev)
+    results.append(row)
 
     # -----------------------------------------------------------------------
     # Experiments 2 and 3 - Model progression and class imbalance
@@ -67,7 +69,10 @@ def main():
     #   c) threshold tuning: model a), but the 0.5 cutoff is replaced by the
     #                       threshold that maximizes F1 on the OOF probabilities.
     #                       "Threshold tuning changes decisions without
-    #                       retraining the model" (S6).
+    #                       retraining the model" (S6). Its F1 is slightly
+    #                       optimistic: the threshold is chosen AND scored on
+    #                       the same OOF probabilities. The honest score comes
+    #                       from the test set (final_evaluation.py).
     # SMOTE is NOT used: our data has 7 categorical features and SMOTE
     # interpolates between rows; "we cannot interpolate between categories
     # such as 'France' and 'Spain'" (S6).
