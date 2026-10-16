@@ -5,7 +5,6 @@ Usage from another script:
     X_dev, X_test, y_dev, y_test = get_dev_test_data()
 """
 
-import pandas as pd
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 
@@ -31,9 +30,7 @@ def clean_data(X, y):
 
     # OpenML returns categories as the pandas "category" type. We convert them to
     # plain text so the imputer and the encoder treat every column the same way.
-    for column in df.columns:
-        if isinstance(df[column].dtype, pd.CategoricalDtype):
-            df[column] = df[column].astype("object")
+    df = df.astype({column: "object" for column in df.select_dtypes("category").columns})
 
     # Binary target: 1 = income above 50K (positive, minority class), 0 = otherwise.
     y_clean = (df.pop(config.TARGET_NAME) == config.POSITIVE_LABEL).astype(int)
