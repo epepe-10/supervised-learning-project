@@ -14,7 +14,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 
 from src import config
-from src.features import add_features
+from src.features import add_features, feature_names_out
 
 MODEL_NAMES = ["logistic_regression", "random_forest", "lightgbm"]
 
@@ -88,7 +88,8 @@ def build_pipeline(model_name, params=None, use_new_features=True):
     steps = []
     # 1. Add the engineered features (stateless, see features.py).
     if use_new_features:
-        steps.append(("features", FunctionTransformer(add_features)))
+        steps.append(("features", FunctionTransformer(add_features,
+                                                      feature_names_out=feature_names_out)))
     # 2. Impute, scale and encode, learned on the training rows only.
     steps.append(("preprocessor", build_preprocessor(use_new_features)))
     # 3. The classifier.

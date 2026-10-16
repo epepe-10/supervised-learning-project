@@ -11,6 +11,8 @@ Tree models (Random Forest, LightGBM) can learn these shapes by themselves,
 so the new features matter most for the linear baseline.
 """
 
+from src import config
+
 
 def add_features(X):
     """Return a copy of X with the engineered features added.
@@ -38,3 +40,12 @@ def add_features(X):
     X["has_capital"] = ((X["capital-gain"] > 0) | (X["capital-loss"] > 0)).astype(int)
 
     return X
+
+
+def feature_names_out(transformer, input_features):
+    """Column names after add_features: the input columns, then the new ones.
+
+    The Pipeline needs this to answer get_feature_names_out(), which gives a
+    name to each column the model sees (used later for SHAP explanations).
+    """
+    return [*input_features, *config.ENGINEERED_FEATURES]
