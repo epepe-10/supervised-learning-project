@@ -148,22 +148,10 @@ def explore_categorical(X_dev, y_dev):
     save_figure(fig, "eda_categorical_rates.png")
 
 
-def explore_sensitive(X_dev, y_dev):
-    """Base rates for the sensitive attributes (input for the fairness audit)."""
-    print_title("8. Sensitive attributes")
-    for column in config.SENSITIVE_FEATURES:
-        table = pd.DataFrame({
-            "share of people (%)": (100 * X_dev[column].value_counts(normalize=True)).round(1),
-            "share of >50K (%)": (100 * y_dev.groupby(X_dev[column]).mean()).round(1),
-        })
-        print(table, "\n")
-    print("-> Large gaps in base rates already exist in the data, before any model.")
-
-
 def print_leakage_audit():
     """(S1) Prediction-time test: 'Could I genuinely know this value at the
     moment the prediction is made?'"""
-    print_title("9. Leakage audit")
+    print_title("8. Leakage audit")
     audit = pd.DataFrame(
         [
             ["age, sex, race, native-country", "Known", "Low", "Fixed personal characteristics"],
@@ -180,7 +168,7 @@ def print_leakage_audit():
 
 def print_conclusions():
     """(S1) EDA finishes with justified decisions and explicit open assumptions."""
-    print_title("10. What we know / what remains open")
+    print_title("9. What we know / what remains open")
     print("What we know:")
     print("  - Binary target, ~24% positives -> imbalanced, accuracy is not enough.")
     print("  - Missing values only in workclass, occupation, native-country.")
@@ -203,7 +191,6 @@ def main():
     explore_target(y_dev)
     explore_numeric(X_dev, y_dev)
     explore_categorical(X_dev, y_dev)
-    explore_sensitive(X_dev, y_dev)
     print_leakage_audit()
     print_conclusions()
     print(f"\nFigures saved in {config.FIGURES_DIR}")

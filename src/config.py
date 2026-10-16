@@ -73,6 +73,3 @@ ENGINEERED_FEATURES = [
 #   - "fnlwgt":    census sampling weight, describes the survey design,
 #                  not the person whose income we predict.
 DROPPED_FEATURES = ["education", "fnlwgt"]
-
-# Sensitive attributes, kept for the fairness audit later in the project.
-SENSITIVE_FEATURES = ["sex", "race"]

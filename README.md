@@ -42,7 +42,7 @@ Run from the project root, in this order:
 ```bash
 python -m src.eda               # 1. EDA                               (~10 s)
 python -m src.baseline          # 2. untuned CV experiments            (~5 min)
-python -m src.tune              # 3. Optuna tuning, all 3 models       (~40 min)
+python -m src.tune              # 3. Optuna tuning, all 3 models       (~1 h)
 python -m src.tune --model lightgbm --trials 10   # (tune one model / fewer trials)
 python -m src.train             # 4. thresholds + refit + save models  (~3 min)
 python -m src.final_evaluation  # 5. one evaluation on the test set    (~10 s)
@@ -73,5 +73,4 @@ python -m src.final_evaluation  # 5. one evaluation on the test set    (~10 s)
 - [ ] Experiment tracking
 - [ ] Explainability (SHAP)
 - [ ] Calibration diagnostics
-- [ ] Fairness & bias audit
 - [ ] Prediction endpoint
