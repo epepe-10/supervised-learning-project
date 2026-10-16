@@ -65,10 +65,13 @@ def check_integrity(X_raw, y_raw):
     print("-> Dropped in data.clean_data().")
 
     print_title("4. Redundant column: education vs education-num")
-    # If each education label maps to exactly one number, the two columns are
-    # the same information written twice.
+    # The two columns are the same information written twice only if the mapping
+    # is one-to-one, so we check both directions: one number per label AND one
+    # label per number (the second check is what makes dropping 'education' safe).
     numbers_per_label = X_raw.groupby("education", observed=True)["education-num"].nunique()
+    labels_per_number = X_raw.groupby("education-num")["education"].nunique()
     print(f"Max number of education-num values per education label: {numbers_per_label.max()}")
+    print(f"Max number of education labels per education-num value: {labels_per_number.max()}")
     print("-> One-to-one mapping: we keep only 'education-num' (ordered) and drop 'education'.")
 
 
