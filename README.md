@@ -19,6 +19,9 @@ src/
   baseline.py          untuned experiments: feature engineering, models, imbalance remedies
   tune.py              Optuna + stratified 5-fold CV for each model
   train.py             OOF threshold, refit on the full dev set, save the models
+  tracking.py          MLflow logging of every tuning trial and final training
+  explain.py           SHAP global importance + local explanations of the final model
+  calibration.py       reliability diagram, Brier score and ECE of the final model
   final_evaluation.py  single evaluation of the 3 models on the untouched test set
 configs/               (reserved for YAML configuration)
 notebooks/             supplementary notebooks (visualizations only)
@@ -45,7 +48,15 @@ python -m src.baseline          # 2. untuned CV experiments            (~5 min)
 python -m src.tune              # 3. Optuna tuning, all 3 models       (~1 h)
 python -m src.tune --model lightgbm --trials 10   # (tune one model / fewer trials)
 python -m src.train             # 4. thresholds + refit + save models  (~3 min)
-python -m src.final_evaluation  # 5. one evaluation on the test set    (~10 s)
+python -m src.explain           # 5. SHAP explanations, final model    (~10 s)
+python -m src.calibration       # 6. calibration diagnostics           (~1 min)
+python -m src.final_evaluation  # 7. one evaluation on the test set    (~10 s)
+```
+
+Tuning and training runs are logged to MLflow (`mlflow.db` + `mlruns/`, not versioned). To browse them:
+
+```bash
+mlflow ui                       # then open http://127.0.0.1:5000
 ```
 
 ## Methodology at a glance
@@ -61,6 +72,9 @@ python -m src.final_evaluation  # 5. one evaluation on the test set    (~10 s)
 | Models | Logistic regression (Ridge / Lasso / Elastic Net) → Random Forest → LightGBM | S1–S5 |
 | Imbalance | Class weights tuned as a hyperparameter + decision threshold chosen on out-of-fold scores (max F1); no SMOTE (categorical data) | S6 |
 | Tuning | Optuna (TPE), mean CV Average Precision as the objective | S5, S6 |
+| Tracking | MLflow: one run per Optuna trial (params + AP of each fold), grouped under one run per model (best params + tuning files); one run per final training (OOF metrics, threshold, model) | S5 |
+| Explainability | SHAP `TreeExplainer` on the final model; one-hot SHAP values summed per original feature; global mean \|SHAP\| + beeswarm; waterfall plots for 3 people | S8 |
+| Calibration | Final model, out-of-fold probabilities: reliability diagram (10 equal-width bins) + histogram, Brier score, ECE | S7 |
 
 ## Roadmap
 
@@ -70,7 +84,7 @@ python -m src.final_evaluation  # 5. one evaluation on the test set    (~10 s)
 - [x] Modelling progression (3 models)
 - [x] Single sklearn `Pipeline`
 - [x] Hyperparameter tuning with Optuna + CV
-- [ ] Experiment tracking
-- [ ] Explainability (SHAP)
-- [ ] Calibration diagnostics
+- [x] Experiment tracking
+- [x] Explainability (SHAP)
+- [x] Calibration diagnostics
 - [ ] Prediction endpoint
