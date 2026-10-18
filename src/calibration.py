@@ -18,8 +18,10 @@ model that did not train on it). The test set stays untouched (S1).
 
 Outputs:
     outputs/calibration_bins.csv                 one row per probability bin
+    outputs/figures/calibration_reliability.png  reliability diagram + histogram
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.calibration import calibration_curve
@@ -62,6 +64,33 @@ def expected_calibration_error(y_true, y_proba, n_bins=N_BINS):
     return np.sum(counts / counts.sum() * np.abs(acc - conf))
 
 
+def plot_reliability(conf, acc, counts, y_proba, title, path):
+    """Reliability diagram (left) next to the histogram of predicted
+    probabilities (right): (S7) "Pair it with a histogram", to see where the
+    model actually puts its predictions."""
+    fig, (ax_curve, ax_hist) = plt.subplots(1, 2, figsize=(12, 5))
+
+    ax_curve.plot([0, 1], [0, 1], "k--", label="perfect calibration")
+    # Marker size proportional to the number of people in the bin (S7):
+    # a point built on few people is weaker evidence.
+    ax_curve.plot(conf, acc, color="tab:blue", label="final model")
+    ax_curve.scatter(conf, acc, s=300 * counts / counts.max(), color="tab:blue")
+    ax_curve.set_xlabel("mean predicted probability")
+    ax_curve.set_ylabel("observed share of >50K")
+    ax_curve.set_title("Reliability diagram")
+    ax_curve.legend()
+
+    ax_hist.hist(y_proba, bins=N_BINS, range=(0, 1), edgecolor="white")
+    ax_hist.set_xlabel("predicted probability of >50K")
+    ax_hist.set_ylabel("number of people")
+    ax_hist.set_title("Where the predictions are")
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 def main():
     X_dev, X_test, y_dev, y_test = get_dev_test_data()   # X_test / y_test NOT used here
 
@@ -99,6 +128,12 @@ def main():
     direction = "over" if oof_proba.mean() > prevalence else "under"
     print(f"\nMean predicted P(>50K) = {oof_proba.mean():.3f} vs observed share = "
           f"{prevalence:.3f}: the model {direction}-estimates the chance of >50K.")
+
+    config.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    plot_reliability(conf, acc, counts, oof_proba,
+                     f"{final_model} - out-of-fold calibration "
+                     f"(Brier = {brier:.3f}, ECE = {ece:.3f})",
+                     config.FIGURES_DIR / "calibration_reliability.png")
 
 
 if __name__ == "__main__":
