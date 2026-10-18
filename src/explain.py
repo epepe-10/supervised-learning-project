@@ -2,7 +2,8 @@
 
 Run with:  python -m src.explain      (after python -m src.train)
 
-Requirement: "Produce global feature importance [...] with SHAP"
+Requirement: "Produce global feature importance and local explanations with
+SHAP for a handful of individual predictions."
 
 (S8) SHAP splits ONE prediction into a reference value plus one contribution
 per feature:
@@ -17,15 +18,18 @@ final_evaluation.py (S1).
 Outputs, in outputs/figures/:
     shap_global_importance.png   mean |SHAP| per original feature
     shap_beeswarm.png            SHAP value of every row, per model column
+    shap_local_<case>.png        waterfall plot of one person
 """
 
 import joblib
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import shap
 
 from src import config
 from src.data import get_dev_test_data
+from src.features import add_features
 
 N_ROWS = 1000   # rows explained: enough for a stable global picture, still fast
 
@@ -75,6 +79,7 @@ def main():
     #    pipeline[:-1] = every step except the model. One-hot encoding gives a
     #    sparse matrix, turned into a normal (dense) one for SHAP.
     X_sample = X_dev.sample(N_ROWS, random_state=config.RANDOM_STATE)
+    y_sample = y_dev.loc[X_sample.index]
     X_model = pipeline[:-1].transform(X_sample).toarray()
     # Column names without the ColumnTransformer prefix ("num__age" -> "age").
     columns = [name.split("__", 1)[1] for name in pipeline[:-1].get_feature_names_out()]
@@ -100,6 +105,45 @@ def main():
     # value of the column (red = high). Shows the DIRECTION of each effect.
     shap.plots.beeswarm(shap_values, max_display=15, show=False)
     save_current_figure("shap_beeswarm.png")
+
+    # 4. Local explanations for a handful of people: the most confident
+    #    >50K prediction, the most confident <=50K one, and a borderline case
+    #    (probability closest to the decision threshold).
+    proba = pipeline.predict_proba(X_sample)[:, 1]
+    cases = {
+        "most_likely_above_50k": int(np.argmax(proba)),
+        "least_likely_above_50k": int(np.argmin(proba)),
+        "borderline": int(np.argmin(np.abs(proba - threshold))),
+    }
+    # Readable values (age = 52, not the scaled 0.98) for the plots.
+    X_readable = add_features(X_sample)
+
+    for case, i in cases.items():
+        contributions = per_feature.iloc[i]
+        base_value = shap_values.base_values[i]
+
+        # Additivity check (S8): base value + sum of SHAP = raw score, and the
+        # sigmoid of the raw score gives back the predicted probability.
+        raw_score = base_value + contributions.sum()
+        print(f"\n{case}: P(>50K) = {proba[i]:.3f}, actual = "
+              f"{'>50K' if y_sample.iloc[i] == 1 else '<=50K'}")
+        print(f"  base value {base_value:.2f} + sum of SHAP {contributions.sum():.2f} "
+              f"= {raw_score:.2f} -> sigmoid = {1 / (1 + np.exp(-raw_score)):.3f}")
+
+        top5 = contributions.reindex(contributions.abs().sort_values(ascending=False).index)[:5]
+        for feature, value in top5.items():
+            print(f"  {feature:16s} = {str(X_readable.iloc[i][feature]):22s} SHAP = {value:+.2f}")
+
+        # Waterfall (S8): from the base value, each feature pushes the score
+        # up (red) or down (blue) until the final prediction f(x).
+        explanation = shap.Explanation(
+            values=contributions.values,
+            base_values=base_value,
+            data=X_readable.iloc[i][contributions.index].values,
+            feature_names=list(contributions.index),
+        )
+        shap.plots.waterfall(explanation, max_display=10, show=False)
+        save_current_figure(f"shap_local_{case}.png")
 
 
 if __name__ == "__main__":
