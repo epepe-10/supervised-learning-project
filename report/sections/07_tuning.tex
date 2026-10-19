@@ -1,0 +1,45 @@
+\section{Hyperparameter tuning}
+\label{sec:tuning}
+
+\paragraph{Protocol.} We tuned each model with Optuna and its TPE sampler
+(seed 42, so a re-run proposes the same trials). One trial is one
+configuration and one cross-validated score:
+\begin{enumerate}
+  \item Optuna proposes a set of hyperparameters;
+  \item we build the complete Pipeline with them (features, preprocessing,
+  model);
+  \item we score it with the same 5-fold stratified cross-validation on the
+  development set;
+  \item Optuna receives the mean AP over the 5 folds, and uses all the past
+  trials to choose the next configuration.
+\end{enumerate}
+The budget is 25 trials for the logistic regression, 20 for the random forest
+(the slowest to fit) and 50 for LightGBM, which has the largest search space.
+The search spaces are given in Table~\ref{tab:search-spaces} (appendix). They
+include the class weighting (Section~\ref{sec:imbalance}), from no weight at
+all up to the class ratio. We optimize AP because it judges the ranking of the
+minority class without depending on a threshold, which is chosen afterwards.
+
+\paragraph{Why the best CV score is optimistic.} The best of 20 to 50 trials is
+selected on the same folds that score it, so part of its advantage is luck on
+these particular folds. The best mean CV AP is therefore an optimistic estimate
+of performance, and we do not report it as our final result: the honest
+estimate comes from the test set, which played no role in tuning
+(Section~\ref{sec:test}). Nested cross-validation would remove this bias
+without a test set, but it would multiply the cost of tuning by five; with
+48{,}790 rows, a held-out test set was the cheaper way to get an unbiased
+estimate.
+
+\paragraph{Final training.} For each model, \code{train.py} then
+(1) computes the out-of-fold probabilities of the tuned Pipeline on the same 5
+folds, (2) chooses the threshold that maximizes F1 on them and freezes it,
+(3) refits the Pipeline on the whole development set, and (4) saves the fitted
+Pipeline with its threshold. The final model is the one with the best
+out-of-fold AP.
+
+\paragraph{Results.} \todo{Edu: best hyperparameters of each model
+(outputs/tuning/*\_best\_params.json) and best mean CV AP, plus the
+optimisation history of LightGBM (outputs/tuning/lightgbm\_history.png).
+Comment: did the best values land at the edge of a range? Which class
+weighting did Optuna keep? (Louis's run: scale\_pos\_weight $\approx$ 1.8 for
+LightGBM.)}

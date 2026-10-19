@@ -1,0 +1,16 @@
+\section{Final evaluation on the untouched test set}
+\label{sec:test}
+
+The three tuned models were evaluated once on the 9{,}758 people of the test
+set, each with the threshold frozen during training
+(Section~\ref{sec:tuning}). Nothing was changed after this evaluation.
+
+\todo{Edu: table from outputs/test\_results.csv (ROC-AUC, AP, log-loss,
+accuracy, precision, recall, F1 and threshold of the three models), with the
+76.1\% accuracy of always predicting \negc{} as a reference, and the figures
+test\_roc\_pr.png and test\_confusion.png.}
+
+\todo{Compare with the out-of-fold results of Section~\ref{sec:models}: are the
+test scores close to the cross-validation scores? A small drop is expected
+(Section~\ref{sec:tuning}); a large one would mean we overfitted the folds. Is
+the ranking of the three models the same?}

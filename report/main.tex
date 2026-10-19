@@ -1,0 +1,64 @@
+% Project report - compile with pdflatex (twice, for references),
+% or upload the whole report/ folder to Overleaf.
+% Each section lives in its own file in sections/, so the three of us can
+% write in parallel without merge conflicts.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+% Placeholders for results that come from the full runs: remove them all
+% before submitting (search for "TODO").
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+\newcommand{\todofigure}[1]{%
+  \fbox{\parbox{0.9\textwidth}{\centering\vspace{1.2cm}%
+  \textcolor{red}{\textbf{TODO figure:} #1}\vspace{1.2cm}}}}
+
+% Notation used throughout the text.
+\newcommand{\pos}{\mbox{$>$50K}}
+\newcommand{\negc}{\mbox{$\leq$50K}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{Predicting an income above 50K from census data:\\
+an end-to-end supervised learning proof of concept}
+\author{Eduardo \todo{last name} \and Louis Pimont-Nishimura \and Jules Faucher}
+\date{MSA-DATB09-04 Supervised Learning \& Model Engineering, Albert School\\
+Instructor: Ilana Sebag\\[4pt] October 2026}
+
+\begin{document}
+
+\maketitle
+
+\noindent\textbf{Dataset:} Adult / Census Income, OpenML (\code{name="adult"}, \code{version=2}).\\
+\textbf{Code:} \url{https://github.com/epepe-10/supervised-learning-project}
+
+\input{sections/01_introduction}
+\input{sections/02_eda}
+\input{sections/03_features}
+\input{sections/04_imbalance}
+\input{sections/05_models}
+\input{sections/06_pipeline}
+\input{sections/07_tuning}
+\input{sections/08_tracking}
+\input{sections/09_explainability}
+\input{sections/10_calibration}
+\input{sections/11_test_results}
+\input{sections/12_endpoint}
+\input{sections/13_discussion}
+\input{sections/14_contributions}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}
