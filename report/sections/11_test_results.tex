@@ -5,12 +5,47 @@ The three tuned models were evaluated once on the 9{,}758 people of the test
 set, each with the threshold frozen during training
 (Section~\ref{sec:tuning}). Nothing was changed after this evaluation.
 
-\todo{Edu: table from outputs/test\_results.csv (ROC-AUC, AP, log-loss,
-accuracy, precision, recall, F1 and threshold of the three models), with the
-76.1\% accuracy of always predicting \negc{} as a reference, and the figures
-test\_roc\_pr.png and test\_confusion.png.}
+\begin{table}[H]
+\centering
+\caption{Test-set results of the three tuned models (thresholds frozen on
+the development set). Always predicting \negc{} would reach 76.1\% accuracy.}
+\label{tab:test}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Model & ROC-AUC & AP & Log-loss & Accuracy & Precision & Recall & F1 & Thr. \\
+\midrule
+Logistic regression & 0.910 & 0.773 & 0.317 & 0.845 & 0.658 & 0.732 & 0.693 & 0.37 \\
+Random forest       & 0.918 & 0.805 & 0.353 & 0.847 & 0.651 & \textbf{0.778} & 0.709 & 0.62 \\
+LightGBM            & \textbf{0.926} & \textbf{0.821} & \textbf{0.297} & \textbf{0.863} & \textbf{0.702} & 0.744 & \textbf{0.722} & 0.54 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\todo{Compare with the out-of-fold results of Section~\ref{sec:models}: are the
-test scores close to the cross-validation scores? A small drop is expected
-(Section~\ref{sec:tuning}); a large one would mean we overfitted the folds. Is
-the ranking of the three models the same?}
+\paragraph{Test against cross-validation.} The test scores are slightly below
+the out-of-fold scores of Table~\ref{tab:models-tuned}: about $-0.01$ AP and
+$-0.01$ F1 for every model (LightGBM: AP 0.832 to 0.821, F1 0.733 to 0.722).
+This small drop is the one expected from selecting hyperparameters and
+thresholds on the same folds (Section~\ref{sec:tuning}); it is far too small to
+suggest we overfitted the folds. The ranking is unchanged: LightGBM is first
+on every metric except recall, then the random forest, then the logistic
+regression. Compared with the 76.1\% of the trivial model, LightGBM reaches
+86.3\% accuracy, and above all it finds 74\% of the \pos{} people with a
+precision of 70\%, which the trivial model cannot do at all.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{test_roc_pr.png}
+\caption{ROC and precision-recall curves of the three tuned models on the test
+set.}
+\label{fig:test-roc-pr}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{test_confusion.png}
+\caption{Confusion matrices on the test set, at the frozen threshold of each
+model.}
+\label{fig:test-confusion}
+\end{figure}
