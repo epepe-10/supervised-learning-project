@@ -19,8 +19,9 @@ experiment, \code{adult-income}. The runs are organised as follows:
 \end{itemize}
 In total, the 95 tuning trials (25 + 20 + 50), the 3 tuning studies and the 3
 final trainings are logged. Since the sampler and the folds are seeded,
-re-running the tuning with tracking switched on proposes the same trials
-\todo{Louis: confirm the best parameters were identical after the re-run}. The
+re-running the tuning with tracking switched on proposes the same trials: we
+checked that the best hyperparameters of the three models were identical after
+the re-run, and so were the frozen thresholds and the out-of-fold scores. The
 MLflow interface lets us sort and compare all the trials of a model and open
 the artifacts of any run (Figure~\ref{fig:mlflow}).
 
