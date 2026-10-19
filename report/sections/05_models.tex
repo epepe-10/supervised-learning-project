@@ -1,4 +1,77 @@
 \section{Modelling progression}
 \label{sec:models}
 
-\todo{three models, same metrics, what each step bought (untuned and tuned)}
+We compared three models of increasing flexibility, inside the same Pipeline,
+on the same folds and with the same metrics.
+\begin{enumerate}
+  \item \textbf{Logistic regression}: linear in the log-odds, interpretable and
+  probabilistic, which makes it a strong baseline. The \code{saga} solver
+  supports the three penalties: \code{l1\_ratio} sets the mix (0 = Ridge, 1 =
+  Lasso, in between = Elastic Net) and $C = 1/\lambda$ its strength.
+  \item \textbf{Random forest}: many deep trees, each trained on a bootstrap
+  sample with a random subset of features at each split, then averaged.
+  Averaging decorrelated trees reduces the variance, and trees capture
+  non-linear effects and interactions without feature engineering.
+  \item \textbf{LightGBM}: gradient boosting. Trees are added one at a time,
+  each one correcting the errors of the current ensemble, and grown leaf-wise.
+\end{enumerate}
+
+\subsection{Untuned models}
+
+\begin{table}[H]
+\centering
+\caption{Untuned models, default hyperparameters (5-fold out-of-fold
+predictions on the development set). ``AP std'' is the standard deviation of AP
+across the 5 folds.}
+\label{tab:models-untuned}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Model & ROC-AUC & AP & AP std & Log-loss & F1 (0.5) & F1 (tuned thr.) \\
+\midrule
+Log. reg., no new features & 0.905 & 0.763 & 0.002 & 0.320 & 0.657 & -- \\
+Logistic regression & 0.913 & 0.784 & 0.003 & 0.309 & 0.673 & 0.699 \\
+Random forest       & 0.895 & 0.750 & 0.006 & 0.446 & 0.665 & 0.680 \\
+LightGBM            & \textbf{0.929} & \textbf{0.831} & 0.001 & \textbf{0.275} & \textbf{0.711} & \textbf{0.731} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{What each step bought.}
+\begin{itemize}
+  \item \textbf{Feature engineering} added 0.021 AP to the logistic regression
+  (Section~\ref{sec:features}).
+  \item \textbf{The untuned random forest is worse than the logistic
+  regression} (AP 0.750 against 0.784, log-loss 0.446). With the default
+  settings, the trees grow until each leaf is pure: they memorize the training
+  folds, and the averaged probabilities are poorly calibrated. The forest needs
+  its complexity to be tuned (depth, leaf size), which Section~\ref{sec:tuning}
+  does.
+  \item \textbf{LightGBM is the best model on every metric}: AP 0.831 (+0.047
+  over the logistic regression), ROC-AUC 0.929, log-loss 0.275 and F1 0.731.
+  The gaps between models (at least 0.03 AP) are about ten times larger than
+  the variation of AP across folds (at most 0.006), so the ranking is not an
+  artefact of the split.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{baseline_roc_pr.png}
+\caption{ROC and precision-recall curves of the untuned models (out-of-fold,
+development set). Dashed lines: a random model.}
+\label{fig:roc-pr-baseline}
+\end{figure}
+
+\subsection{Tuned models}
+
+\todo{table from outputs/tuned\_cv\_results.csv (train.py): ROC-AUC, AP,
+log-loss, precision, recall, F1 and threshold of the three tuned models, out of
+fold. Louis's run gave ROC-AUC 0.930 (LightGBM), 0.921 (random forest), 0.913
+(logistic regression) and F1 0.733 for LightGBM: confirm with Edu's files.
+Discuss what tuning bought to each model (most expected for the random
+forest).}
+
+The final model is the one with the best out-of-fold AP after tuning:
+\todo{confirm: LightGBM}. It is chosen on cross-validation only, before the
+test set is used.
