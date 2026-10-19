@@ -65,13 +65,34 @@ development set). Dashed lines: a random model.}
 
 \subsection{Tuned models}
 
-\todo{table from outputs/tuned\_cv\_results.csv (train.py): ROC-AUC, AP,
-log-loss, precision, recall, F1 and threshold of the three tuned models, out of
-fold. Louis's run gave ROC-AUC 0.930 (LightGBM), 0.921 (random forest), 0.913
-(logistic regression) and F1 0.733 for LightGBM: confirm with Edu's files.
-Discuss what tuning bought to each model (most expected for the random
-forest).}
+\begin{table}[H]
+\centering
+\caption{Tuned models (5-fold out-of-fold predictions on the development set,
+threshold chosen on these predictions to maximize F1).}
+\label{tab:models-tuned}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Model & ROC-AUC & AP & Log-loss & Precision & Recall & F1 & Threshold \\
+\midrule
+Logistic regression & 0.913 & 0.784 & 0.309 & 0.665 & 0.736 & 0.699 & 0.37 \\
+Random forest       & 0.921 & 0.814 & 0.343 & 0.670 & \textbf{0.773} & 0.718 & 0.62 \\
+LightGBM            & \textbf{0.930} & \textbf{0.832} & \textbf{0.287} & \textbf{0.718} & 0.748 & \textbf{0.733} & 0.54 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{What tuning bought.} Tuning mattered most where the defaults were
+worst. The random forest gains 0.064 AP (0.750 to 0.814) and 0.038 F1 once its
+depth and leaf size are limited: it stops memorizing the training folds and
+moves from last to second place. The logistic regression does not move (AP
+0.784, F1 0.699): with only two hyperparameters and a linear decision
+boundary, the default settings were already close to its best. LightGBM gains
+almost nothing (AP 0.831 to 0.832), because its defaults were already well
+suited to this table. The ranking of the tuned models is the same on every
+metric except recall, where the balanced random forest is ahead.
 
 The final model is the one with the best out-of-fold AP after tuning:
-\todo{confirm: LightGBM}. It is chosen on cross-validation only, before the
+LightGBM. It is chosen on cross-validation only, before the
 test set is used.

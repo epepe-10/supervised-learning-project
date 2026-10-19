@@ -43,7 +43,7 @@ all in the middle of the range: it is over-confident in its \pos{}
 predictions.
 
 \paragraph{Why: the class weight.} Optuna kept \code{scale\_pos\_weight}
-$\approx 1.8$ for LightGBM \todo{confirm}. A class weight makes each \pos{}
+$= 1.80$ for LightGBM. A class weight makes each \pos{}
 person count more during training, which shifts all the probabilities up. To
 check that this is the cause, we compared two untuned LightGBM models that
 differ only by this weight (Table~\ref{tab:spw}).

@@ -37,9 +37,51 @@ folds, (2) chooses the threshold that maximizes F1 on them and freezes it,
 Pipeline with its threshold. The final model is the one with the best
 out-of-fold AP.
 
-\paragraph{Results.} \todo{Edu: best hyperparameters of each model
-(outputs/tuning/*\_best\_params.json) and best mean CV AP, plus the
-optimisation history of LightGBM (outputs/tuning/lightgbm\_history.png).
-Comment: did the best values land at the edge of a range? Which class
-weighting did Optuna keep? (Louis's run: scale\_pos\_weight $\approx$ 1.8 for
-LightGBM.)}
+\paragraph{Results.} Table~\ref{tab:best-params} gives the best configuration
+of each model and its mean CV AP.
+
+\begin{table}[H]
+\centering
+\caption{Best hyperparameters found by Optuna and best mean CV AP.}
+\label{tab:best-params}
+\small
+\begin{tabular}{lp{8.5cm}r}
+\toprule
+Model & Best hyperparameters & CV AP \\
+\midrule
+Logistic regression & $C = 1.89$, \code{l1\_ratio} $= 0.77$ (Elastic Net, mostly
+Lasso), no class weight & 0.784 \\
+Random forest & 200 trees, \code{max\_depth} $= 14$, \code{min\_samples\_leaf}
+$= 3$, \code{max\_features} $= 0.60$, \code{class\_weight="balanced"} & 0.815 \\
+LightGBM & 350 trees, learning rate $0.048$, 26 leaves,
+\code{min\_child\_samples} $= 11$, \code{subsample} $= 0.81$,
+\code{colsample\_bytree} $= 0.57$, $\lambda = 0.015$,
+\code{scale\_pos\_weight} $= 1.80$ & 0.833 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three observations:
+\begin{itemize}
+  \item \textbf{Edges of the ranges.} Only one value landed at the edge of its
+  range: \code{max\_features} $= 0.60$ for the random forest, the upper bound.
+  Letting each split see more features might still help the forest a little;
+  we did not extend the range because the forest stays well behind LightGBM.
+  All the other values are inside their ranges.
+  \item \textbf{Class weighting.} Optuna made three different choices: no
+  weight for the logistic regression, \code{"balanced"} for the random forest,
+  and a moderate weight of 1.80 for LightGBM, about half of the class ratio
+  (3.2). Since the threshold is tuned afterwards in every case, the weight is
+  just one more hyperparameter, kept only when it improves AP.
+  \item \textbf{A flat optimum for LightGBM.} Its best trial is trial 2: the 47
+  following trials did not beat it (Figure~\ref{fig:lgbm-history}). Many
+  configurations reach about the same AP, so more trials would not change the
+  model much.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{lightgbm_history.png}
+\caption{Mean CV AP of each Optuna trial for LightGBM.}
+\label{fig:lgbm-history}
+\end{figure}
