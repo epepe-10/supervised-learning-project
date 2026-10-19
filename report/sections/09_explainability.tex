@@ -1,4 +1,54 @@
 \section{Explainability with SHAP}
 \label{sec:shap}
 
-\todo{global importance, local explanations, business sense}
+\paragraph{Method.} SHAP splits one prediction into a reference value plus one
+contribution per feature: $f(x) = \phi_0 + \sum_j \phi_j(x)$, where $\phi_0$ is
+the base value. For LightGBM, \code{TreeExplainer} computes these values
+exactly, in log-odds of \pos: a positive value pushes the prediction towards
+\pos. We explain the final model on 1{,}000 people drawn from the development
+set; the test set stays untouched. One-hot encoding splits each categorical
+feature into several columns, and SHAP values are additive, so we sum the
+values of the columns of each original feature (e.g.\ all the
+\code{relationship} columns) to get one contribution per feature. As a check,
+for every explained person, the base value plus the sum of the contributions
+gives back the raw score, and its sigmoid gives back the predicted probability.
+
+\paragraph{Global importance.} The global importance of a feature is its mean
+absolute SHAP value over the 1{,}000 people: how much it moves the
+predictions on average, whatever the direction. The beeswarm plot adds the
+direction (Figure~\ref{fig:shap-global}). \todo{Louis: ranking of the features
+and 2--3 sentences on the beeswarm.}
+
+\begin{figure}[H]
+\centering
+\todofigure{Louis: shap\_global\_importance.png and shap\_beeswarm.png, side by
+side}
+\caption{Global SHAP importance per original feature (left) and beeswarm plot
+(right) of the final model.}
+\label{fig:shap-global}
+\end{figure}
+
+\paragraph{Local explanations.} We explain three people: the most confident
+\pos{} prediction, the most confident \negc{} prediction, and the person
+closest to the decision threshold (Figure~\ref{fig:shap-local}). \todo{Louis:
+1--2 sentences per person: which features push up, which push down.}
+
+\begin{figure}[H]
+\centering
+\todofigure{Louis: the three waterfall plots (shap\_local\_*.png)}
+\caption{Waterfall plots: from the base value, each feature pushes the score
+up (red) or down (blue) until the final prediction.}
+\label{fig:shap-local}
+\end{figure}
+
+\paragraph{Do the important features make business sense?} \todo{Discuss with
+the final ranking. Leads: the household variables (marital status,
+relationship) as a proxy for age, career stage and a second income; capital
+gains as a direct sign of wealth; age and education as career
+progression. Check how much sex and race weigh: a fairness concern even
+without the audit. Do the engineered features (Section~\ref{sec:features})
+appear?} Two cautions apply to this reading. SHAP explains what the model
+does, not what causes a high income: being married does not raise anyone's
+income in itself. And correlated features share the credit: \code{age} and
+\code{age\_squared}, \code{marital-status} and \code{relationship}, or
+\code{education-num} and \code{education\_x\_hours} must be read together.

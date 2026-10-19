@@ -1,4 +1,81 @@
 \section{Calibration diagnostics}
 \label{sec:calibration}
 
-\todo{reliability curve, Brier score, ECE, over- or under-confident, trust for a downstream decision}
+Ranking and calibration are two different questions. AP and ROC-AUC ask
+whether \pos{} people get higher scores than the others; calibration asks
+whether a predicted 0.7 means that about 70\% of such people really earn \pos.
+
+\paragraph{Method.} We judge the final model on its out-of-fold probabilities
+on the development set: each person is predicted by a model that did not train
+on them, and the test set stays untouched. The reliability diagram groups the
+predictions into 10 equal-width bins and compares, in each bin, the mean
+predicted probability with the observed share of \pos; a histogram next to it
+shows how many people fall in each bin. Two summary scores complete it (lower
+is better for both):
+\begin{itemize}
+  \item the \textbf{Brier score}, the mean squared error between the predicted
+  probability and the 0/1 outcome. As a reference, always predicting the
+  prevalence gives $0.239 \times 0.761 = 0.182$;
+  \item the \textbf{expected calibration error},
+  $\text{ECE} = \sum_m \frac{|B_m|}{n}\,\lvert \text{acc}(B_m) -
+  \text{conf}(B_m) \rvert$: the gap between observed share and mean prediction
+  in each bin $B_m$, weighted by the share of people in that bin.
+\end{itemize}
+
+\paragraph{Results.} \todo{Louis: calibration\_reliability.png, Brier score
+and ECE of the final model, and the reliability table
+(outputs/calibration\_bins.csv). Louis's run: in the middle of the range, the
+model predicts about 55\% where only about 39\% of the people earn \pos.}
+
+\begin{figure}[H]
+\centering
+\todofigure{Louis: calibration\_reliability.png}
+\caption{Reliability diagram (left) and histogram of the predicted
+probabilities (right) of the final model, out-of-fold on the development set.}
+\label{fig:calibration}
+\end{figure}
+
+\paragraph{Over- or under-confident?} \todo{check with the final table that
+the gap is positive in every bin.} The curve lies below the diagonal: in each
+bin, the model predicts a higher probability of \pos{} than the share
+observed. The model systematically over-estimates the chance of \pos, most of
+all in the middle of the range: it is over-confident in its \pos{}
+predictions.
+
+\paragraph{Why: the class weight.} Optuna kept \code{scale\_pos\_weight}
+$\approx 1.8$ for LightGBM \todo{confirm}. A class weight makes each \pos{}
+person count more during training, which shifts all the probabilities up. To
+check that this is the cause, we compared two untuned LightGBM models that
+differ only by this weight (Table~\ref{tab:spw}).
+
+\begin{table}[H]
+\centering
+\caption{Untuned LightGBM with and without class weight (5-fold out-of-fold,
+development set). The observed share of \pos{} is 0.239.}
+\label{tab:spw}
+\begin{tabular}{lrrrrr}
+\toprule
+\code{scale\_pos\_weight} & AP & F1 (tuned thr.) & Brier & ECE & Mean prediction \\
+\midrule
+1.0 & 0.8307 & 0.7314 & 0.0876 & 0.0046 & 0.239 \\
+1.8 & 0.8307 & 0.7307 & 0.0931 & 0.0511 & 0.291 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The weight changes neither the ranking (same AP) nor the decisions (same F1,
+once the threshold is tuned), but it multiplies the ECE by eleven and raises
+the mean prediction from 0.239 to 0.291. This is consistent with
+Section~\ref{sec:imbalance}: AP only depends on the order of the scores, so
+Optuna had no reason to prefer one weight over another, and the tuned
+threshold already handles the imbalance.
+
+\paragraph{Would we trust the probabilities as-is?} For the decisions, yes: the
+threshold was chosen on these same, shifted probabilities, so the \pos{} /
+\negc{} decisions are consistent. For the probabilities themselves, no: any
+downstream use that reads them as real chances (an expected number of \pos{}
+people, a score shown to a user) would over-estimate. Two fixes are possible:
+set \code{scale\_pos\_weight} to 1 and tune again, or recalibrate the
+probabilities after training (Platt scaling or isotonic regression, fitted on
+out-of-fold predictions). \todo{team decision: say which fix we would apply,
+or apply one.}
