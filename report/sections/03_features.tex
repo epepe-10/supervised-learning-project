@@ -30,8 +30,11 @@ out-of-fold predictions, threshold 0.5), the three features raise ROC-AUC from
 about seven times the standard deviation of AP across folds (0.003). Tree models
 can learn such shapes by themselves, so we expected the features to matter
 mostly for the linear model; we kept them for all three models so that every
-model sees the same inputs. \todo{after SHAP: say whether LightGBM actually
-uses them}
+model sees the same inputs. SHAP shows that LightGBM does use two of them
+(Section~\ref{sec:shap}): \code{education\_x\_hours} is its 5th most important
+feature, ahead of \code{education-num}, and \code{age\_squared} is 8th.
+\code{has\_capital} matters little (12th of 15), since the trees can split on
+\code{capital-gain} directly.
 
 Note that \code{age} and \code{age\_squared} are strongly correlated. With a
 regularized model this does not hurt the predictions, but the two features
