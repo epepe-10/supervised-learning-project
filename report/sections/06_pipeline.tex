@@ -28,7 +28,7 @@ All the preprocessing and the model are wrapped in one scikit-learn
   have let each validation fold influence its own preprocessing.
   \item \textbf{The same transformations everywhere.} The exact same object is
   used in cross-validation, refitted on the whole development set, evaluated
-  on the test set and served by the endpoint (Section~\ref{sec:endpoint}).
+  on the test set and saved with its threshold to score new rows.
   There is no second implementation of the preprocessing that could drift
   from the first one.
   \item \textbf{Tuning covers the whole chain.} Each Optuna trial builds and

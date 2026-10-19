@@ -22,7 +22,7 @@ with one feature of each kind, each motivated by the analysis above.
 The three features only combine columns of the same row. They learn nothing
 from the data (no mean, no median, no target), so they cannot leak information
 from validation rows into training rows. They are computed inside the Pipeline,
-so the prediction endpoint computes them too.
+so they are recomputed for any new row the saved model scores.
 
 \paragraph{What they bought.} On the untuned logistic regression (5-fold
 out-of-fold predictions, threshold 0.5), the three features raise ROC-AUC from

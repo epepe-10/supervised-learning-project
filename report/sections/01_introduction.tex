@@ -8,8 +8,8 @@ census: 48{,}842 people, 14 features and a binary target in which only 23.9\% of
 people are positive. The task is therefore a binary classification on tabular
 data with an imbalanced target.
 
-The goal is a complete proof of concept, from the raw table to a prediction
-endpoint. The whole project follows one validation protocol. The data is split
+The goal is a complete proof of concept, from the raw table to a tuned,
+explained and calibrated model evaluated on an untouched test set. The whole project follows one validation protocol. The data is split
 once into a development set (80\%) and a test set (20\%). Every decision
 (preprocessing, features, model, hyperparameters, imbalance remedy and decision
 threshold) is made with 5-fold stratified cross-validation on the development
