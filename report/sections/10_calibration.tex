@@ -22,23 +22,50 @@ is better for both):
   in each bin $B_m$, weighted by the share of people in that bin.
 \end{itemize}
 
-\paragraph{Results.} \todo{Louis: calibration\_reliability.png, Brier score
-and ECE of the final model, and the reliability table
-(outputs/calibration\_bins.csv). Louis's run: in the middle of the range, the
-model predicts about 55\% where only about 39\% of the people earn \pos.}
+\paragraph{Results.} On the 39{,}032 out-of-fold predictions of LightGBM, the
+Brier score is 0.092, half of the 0.182 of the constant prediction, and the ECE
+is 0.049 (Figure~\ref{fig:calibration}, Table~\ref{tab:bins}). The histogram
+shows that half of the people (19{,}171) get a probability below 0.1, where the
+model is nearly calibrated. The gaps are largest in the middle of the range:
+around 0.55, the model predicts 55\% where only 39\% of the people earn \pos.
+Over all the people, the mean prediction is 0.289 against an observed share of
+0.239.
+
+\begin{table}[H]
+\centering
+\caption{Reliability table of the final model (10 equal-width bins,
+out-of-fold on the development set). Gap = mean prediction $-$ observed share.}
+\label{tab:bins}
+\begin{tabular}{rrrrr}
+\toprule
+Bin & Mean prediction & Observed share & Gap & People \\
+\midrule
+0.0--0.1 & 0.023 & 0.014 & $+0.010$ & 19{,}171 \\
+0.1--0.2 & 0.145 & 0.103 & $+0.042$ & 3{,}180 \\
+0.2--0.3 & 0.248 & 0.179 & $+0.069$ & 2{,}270 \\
+0.3--0.4 & 0.351 & 0.241 & $+0.110$ & 1{,}824 \\
+0.4--0.5 & 0.450 & 0.316 & $+0.134$ & 2{,}046 \\
+0.5--0.6 & 0.550 & 0.391 & $+0.159$ & 1{,}961 \\
+0.6--0.7 & 0.649 & 0.512 & $+0.137$ & 1{,}712 \\
+0.7--0.8 & 0.752 & 0.620 & $+0.132$ & 1{,}923 \\
+0.8--0.9 & 0.846 & 0.762 & $+0.084$ & 1{,}825 \\
+0.9--1.0 & 0.979 & 0.974 & $+0.005$ & 3{,}120 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[H]
 \centering
-\todofigure{Louis: calibration\_reliability.png}
+\includegraphics[width=\textwidth]{calibration_reliability.png}
 \caption{Reliability diagram (left) and histogram of the predicted
 probabilities (right) of the final model, out-of-fold on the development set.}
 \label{fig:calibration}
 \end{figure}
 
-\paragraph{Over- or under-confident?} \todo{check with the final table that
-the gap is positive in every bin.} The curve lies below the diagonal: in each
+\paragraph{Over- or under-confident?} The curve lies below the diagonal: in each
 bin, the model predicts a higher probability of \pos{} than the share
-observed. The model systematically over-estimates the chance of \pos, most of
+observed. The gap is positive in all ten bins of Table~\ref{tab:bins}, from
+$+0.005$ at the top of the range to $+0.159$ around 0.55. The model systematically over-estimates the chance of \pos, most of
 all in the middle of the range: it is over-confident in its \pos{}
 predictions.
 
