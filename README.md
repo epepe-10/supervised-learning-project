@@ -1,6 +1,6 @@
 # Supervised Learning & Model Engineering: Project
 
-End-to-end supervised learning proof of concept for tabular binary classification, going from raw data to a served prediction endpoint.
+End-to-end supervised learning proof of concept for tabular binary classification, going from raw data to a tuned, explained and calibrated final model evaluated on an untouched test set.
 
 - **Course:** MSA-DATB09-04 (Albert School), Ilana Sebag
 - **Dataset:** Adult / Census Income (OpenML, `name="adult", version=2`). The task is to predict whether a person's annual income is above 50K$.
@@ -87,4 +87,4 @@ mlflow ui                       # then open http://127.0.0.1:5000
 - [x] Experiment tracking
 - [x] Explainability (SHAP)
 - [x] Calibration diagnostics
-- [ ] Prediction endpoint
+- [ ] Final evaluation on the test set
