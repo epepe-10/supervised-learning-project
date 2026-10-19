@@ -4,7 +4,7 @@ End-to-end supervised learning proof of concept for tabular binary classificatio
 
 - **Course:** MSA-DATB09-04 (Albert School), Ilana Sebag
 - **Dataset:** Adult / Census Income (OpenML, `name="adult", version=2`). The task is to predict whether a person's annual income is above 50K$.
-- **Team:** _TBD_
+- **Team:** Eduardo, Louis Pimont-Nishimura, Jules Faucher
 
 ## Project structure
 
