@@ -23,6 +23,7 @@ Outputs, in outputs/tuning/:
     <model>_best_params.json   best hyperparameters, read by train.py
     <model>_trials.csv         every trial: parameters + CV score
     <model>_history.png        CV score of each trial
+Every trial is also logged to MLflow (see tracking.py).
 """
 
 import argparse
@@ -32,7 +33,7 @@ import matplotlib.pyplot as plt
 import optuna
 from sklearn.model_selection import cross_val_score
 
-from src import config
+from src import config, tracking
 from src.data import get_dev_test_data
 from src.evaluate import get_cv_folds
 from src.pipeline import MODEL_NAMES, build_pipeline
@@ -100,6 +101,7 @@ def tune_model(model_name, X_dev, y_dev, n_trials):
         scores = cross_val_score(pipeline, X_dev, y_dev, cv=get_cv_folds(),
                                  scoring="average_precision", n_jobs=-1)
         print(f"  trial {trial.number}: mean CV AP = {scores.mean():.4f}")
+        tracking.log_trial(model_name, trial.number, params, scores)   # requirement 7
         return scores.mean()
 
     # direction="maximize": a higher Average Precision is better.
@@ -109,6 +111,7 @@ def tune_model(model_name, X_dev, y_dev, n_trials):
         sampler=optuna.samplers.TPESampler(seed=config.RANDOM_STATE),
         study_name=model_name,
     )
+    tracking.start_tuning_run(model_name)   # requirement 7: one MLflow run groups all trials
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
 
     # Save the best hyperparameters (read by train.py) and every trial.
@@ -131,6 +134,7 @@ def tune_model(model_name, X_dev, y_dev, n_trials):
     fig.tight_layout()
     fig.savefig(config.TUNING_DIR / f"{model_name}_history.png", dpi=150)
     plt.close(fig)
+    tracking.end_tuning_run(model_name, study.best_value, best_params)   # requirement 7
 
     print(f"{model_name}: best mean CV AP = {study.best_value:.4f} after {n_trials} trials")
     print(f"  best params: {best_params}")

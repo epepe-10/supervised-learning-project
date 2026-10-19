@@ -16,6 +16,7 @@ data/*
 !data/.gitkeep
 mlruns/
 mlartifacts/
+mlflow.db
 outputs/
 models/
 *.pkl

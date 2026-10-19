@@ -19,7 +19,7 @@ import json
 import joblib
 import pandas as pd
 
-from src import config
+from src import config, tracking
 from src.data import get_dev_test_data
 from src.evaluate import compute_metrics, find_best_threshold, get_oof_probabilities
 from src.pipeline import MODEL_NAMES, build_pipeline
@@ -59,8 +59,11 @@ def main():
 
         # Step 5 - save the fitted Pipeline AND its threshold: both are needed
         # to turn a raw census row into a decision.
-        joblib.dump({"pipeline": pipeline, "threshold": threshold},
-                    config.MODELS_DIR / f"{model_name}.joblib")
+        model_path = config.MODELS_DIR / f"{model_name}.joblib"
+        joblib.dump({"pipeline": pipeline, "threshold": threshold}, model_path)
+
+        # Requirement 7: log params, OOF metrics, threshold and model file to MLflow.
+        tracking.log_final_training(model_name, params, metrics, model_path)
 
     # Compare the three tuned models on cross-validation (same metrics for all).
     table = pd.DataFrame(results).set_index("model").round(4)
