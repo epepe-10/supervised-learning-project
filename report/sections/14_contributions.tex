@@ -1,9 +1,38 @@
 \section*{Contribution statement}
 \addcontentsline{toc}{section}{Contribution statement}
 
-\todo{who did what, by requirement}
+\todo{each member: check your line.}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+Requirement or stage & Main author & Reviewed by \\
+\midrule
+Repository, data loading and split (1) & Eduardo & Jules \\
+EDA and problem framing (1) & Eduardo & Jules \\
+Feature engineering (2) & Eduardo & Jules \\
+Class imbalance (3) & Eduardo & Jules \\
+Modelling progression (4) & Eduardo & Jules \\
+Pipeline (5) & Eduardo & Jules \\
+Optuna tuning, final training, test evaluation (6) & Eduardo & Jules \\
+Experiment tracking with MLflow (7) & Louis & Eduardo, Jules \\
+SHAP explainability (8) & Louis & Jules \\
+Calibration diagnostics (9) & Louis & Jules \\
+Prediction endpoint & Louis & Jules \\
+Code review and fixes, alternatives tested (Section~\ref{sec:discussion}) & Jules & Eduardo, Louis \\
+Report & All three & All three \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section*{Use of AI coding assistants}
 \addcontentsline{toc}{section}{Use of AI coding assistants}
 
-\todo{where and how AI assistants were used}
+We used Claude (Anthropic), through the Claude Code assistant, to draft parts
+of the code, to review it and suggest fixes, and to help structure and draft
+this report. Commits written with its help carry a ``Co-Authored-By: Claude''
+line in the Git history. Every methodological choice was discussed by the
+team, every number in this report comes from running our own scripts, and
+each member can explain the code. \todo{each member: confirm or complete
+(other tools, other uses).}
