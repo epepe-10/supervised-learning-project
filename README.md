@@ -20,6 +20,7 @@ src/
   tune.py              Optuna + stratified 5-fold CV for each model
   train.py             OOF threshold, refit on the full dev set, save the models
   tracking.py          MLflow logging of every tuning trial and final training
+  regularization.py    coefficients zeroed by the penalty + regularization path (logistic regression)
   explain.py           SHAP global importance + local explanations of the final model
   calibration.py       reliability diagram, Brier score and ECE of the final model
   final_evaluation.py  single evaluation of the 3 models on the untouched test set
@@ -48,6 +49,7 @@ python -m src.baseline          # 2. untuned CV experiments            (~5 min)
 python -m src.tune              # 3. Optuna tuning, all 3 models       (~1 h)
 python -m src.tune --model lightgbm --trials 10   # (tune one model / fewer trials)
 python -m src.train             # 4. thresholds + refit + save models  (~3 min)
+python -m src.regularization    #    regularization path, log. reg.    (~8 min)
 python -m src.explain           # 5. SHAP explanations, final model    (~10 s)
 python -m src.calibration       # 6. calibration diagnostics           (~1 min)
 python -m src.final_evaluation  # 7. one evaluation on the test set    (~10 s)
