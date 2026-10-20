@@ -42,8 +42,12 @@ folds, (2) chooses the threshold that maximizes F1 on them and freezes it,
 Pipeline with its threshold. The final model is the one with the best
 out-of-fold AP.
 
-\paragraph{Results.} Table~\ref{tab:best-params} gives the best configuration
-of each model and its mean CV AP.
+\subsection{Hyperparameters selected by Optuna}
+\label{sec:best-params}
+
+Table~\ref{tab:best-params} gives the best configuration of each model and its
+mean CV AP, and Table~\ref{tab:lgbm-params} explains what each hyperparameter
+of the final model controls.
 
 \begin{table}[H]
 \centering
@@ -66,7 +70,36 @@ LightGBM & 350 trees, learning rate $0.048$, 26 leaves,
 \end{tabular}
 \end{table}
 
-Three observations:
+\begin{table}[H]
+\centering
+\caption{The hyperparameters selected for the final model (LightGBM) and what
+they control.}
+\label{tab:lgbm-params}
+\small
+\begin{tabular}{lrp{8.3cm}}
+\toprule
+Hyperparameter & Value & What it controls \\
+\midrule
+\code{n\_estimators}, \code{learning\_rate} & 350, 0.048 & Number of trees and
+weight $\eta$ of each correction: many small steps rather than a few large
+ones (Section~\ref{sec:models}). \\
+\code{num\_leaves} & 26 & Complexity of each tree (LightGBM grows trees
+leaf-wise, so it limits leaves rather than depth). \\
+\code{min\_child\_samples} & 11 & Minimum number of rows in a leaf: no rule
+built on a handful of people. \\
+\code{subsample}, \code{colsample\_bytree} & 0.81, 0.57 & Share of rows and of
+columns each tree sees: randomness that decorrelates the trees and limits
+overfitting. \\
+\code{reg\_lambda} & 0.015 & L2 penalty on the leaf values; almost none was
+needed. \\
+\code{scale\_pos\_weight} & 1.80 & Weight of a \pos{} person in the loss, about
+half of the class ratio (3.2); it shifts the probabilities up
+(Section~\ref{sec:calibration}). \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Four observations:
 \begin{itemize}
   \item \textbf{Edges of the ranges.} Only one value landed at the edge of its
   range: \code{max\_features} $= 0.60$ for the random forest, the upper bound.
