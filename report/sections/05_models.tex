@@ -16,6 +16,76 @@ on the same folds and with the same metrics.
   each one correcting the errors of the current ensemble, and grown leaf-wise.
 \end{enumerate}
 
+\paragraph{The logistic regression in one equation.} The model computes a
+linear score and turns it into a probability with the sigmoid:
+\[
+  p(x) = \sigma(z) = \frac{1}{1 + e^{-z}}, \qquad
+  z = \beta_0 + \sum_j \beta_j x_j = \log\frac{p}{1-p}.
+\]
+It is linear in the log-odds, not in the probability, so its decision boundary
+$z = \text{const}$ is a hyperplane in the feature space: curves, thresholds and
+interactions must be given to it as features (Section~\ref{sec:features}). The
+coefficients minimize the log-loss (the negative log-likelihood) plus the
+Elastic Net penalty:
+\[
+  \min_\beta \; -\frac{1}{n}\sum_{i=1}^n \bigl[y_i \log p_i + (1-y_i)\log(1-p_i)\bigr]
+  + \lambda \Bigl[\alpha \lVert\beta\rVert_1 + \tfrac{1-\alpha}{2}\lVert\beta\rVert_2^2\Bigr],
+\]
+with $\alpha$ = \code{l1\_ratio} and $\lambda = 1/C$ (scikit-learn writes the
+same trade-off with $C$ in front of the loss). A coefficient adds $\beta_j$ to
+the log-odds, i.e.\ multiplies the odds by $e^{\beta_j}$, other columns held
+fixed. Since the one-hot encoding keeps both \code{sex} columns, the effect of
+being a woman rather than a man is the difference of the two coefficients:
+$-1.87 - (-1.13) = -0.74$, so the odds of \pos{} are multiplied by
+$e^{-0.74} \approx 0.48$ at equal age, education, job and hours. The effect is
+constant on the odds, not on the probability, because the sigmoid is not
+linear.
+
+\paragraph{How a tree chooses its splits.} A node is \emph{pure} when all its
+rows belong to the same class. Impurity measures how far a node is from that.
+With $p$ the share of >50K in the node, the two usual measures are
+\[
+  \text{Gini} = 1 - \sum_k p_k^2 = 2p(1-p),
+  \qquad
+  \text{Entropy} = -\sum_k p_k \log_2 p_k .
+\]
+Both are 0 for a pure node and largest at $p = 0.5$. At the root of our trees,
+$p = 0.24$, so Gini $= 0.365$ and entropy $= 0.795$ bits. At each node, the tree
+tries the candidate splits and keeps the one that most reduces the impurity,
+weighted by the number of rows in each child (with entropy, this reduction is
+the \emph{information gain}). The two measures almost always pick the same
+splits. We kept scikit-learn's default, Gini, which is faster because it has
+no logarithm, and did not tune it. Left alone, the tree keeps splitting until
+every leaf is pure, i.e.\ until it has memorized its training rows. This is why
+the forest's \code{max\_depth} and \code{min\_samples\_leaf} matter
+(Section~\ref{sec:tuning}). LightGBM does not use an impurity measure. It
+picks the split that most reduces the log-loss, computed from the gradients of
+the loss, and its L2 penalty \code{reg\_lambda} enters that gain directly.
+
+\paragraph{How boosting corrects its errors.} LightGBM builds an additive model
+on the log-odds scale. It starts from a constant $F_0$ (the log-odds of the
+base rate), then, at each round $m$, fits a small tree $T_m$ to the negative
+gradient of the log-loss with respect to the current score, which is simply
+$r_i = y_i - p_i$: positive when the model underestimates a \pos{} person,
+negative when it overestimates a \negc{} one. The tree is added with a learning
+rate $\eta$:
+\[
+  F_m(x) = F_{m-1}(x) + \eta\, T_m(x), \qquad
+  p(x) = \sigma\bigl(F_M(x)\bigr).
+\]
+A small $\eta$ makes each correction cautious and needs more trees, so the two
+are tuned together; our tuned model uses $\eta = 0.048$ and 350 trees
+(Section~\ref{sec:tuning}). The two ensembles attack different errors: the
+random forest averages independent deep trees, which mainly reduces the
+variance, while boosting adds corrections one after the other, which mainly
+reduces the bias but can overfit if there are too many or too complex trees.
+LightGBM, XGBoost and CatBoost all implement this same algorithm with
+different engineering choices. We used LightGBM, the course's working model,
+because it is the fastest of the three, which matters when each of the 50
+tuning trials means five fits. CatBoost's main strength, high-cardinality
+categorical features, does not apply here: our largest categorical column,
+\code{native-country}, has about forty categories.
+
 \subsection{Untuned models}
 
 \begin{table}[H]
@@ -86,8 +156,11 @@ LightGBM            & \textbf{0.930} & \textbf{0.832} & \textbf{0.287} & \textbf
 \paragraph{What tuning bought.} Tuning mattered most where the defaults were
 worst. The random forest gains 0.064 AP (0.750 to 0.814) and 0.038 F1 once its
 depth and leaf size are limited: it stops memorizing the training folds and
-moves from last to second place. The logistic regression does not move (AP
-0.784, F1 0.699): with only two hyperparameters and a linear decision
+moves from last to second place. This is the bias--variance trade-off of the
+course: a deep tree with tiny leaves has low bias but high variance, a shallow
+one the opposite, and the tuned depth of 14 with at least 3 rows per leaf is
+the compromise chosen by cross-validation. The logistic regression does not move (AP
+0.784, F1 0.699): with only three hyperparameters and a linear decision
 boundary, the default settings were already close to its best. LightGBM gains
 almost nothing (AP 0.831 to 0.832), because its defaults were already well
 suited to this table. The ranking of the tuned models is the same on every

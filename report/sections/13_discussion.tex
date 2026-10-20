@@ -38,9 +38,43 @@ gain, so we kept the most-frequent imputation. A separate category remains the
 more principled choice for a model in production, because it does not invent a
 job for people who have none.
 
+\subsection{Overfitting: what we checked and what we did not}
+\label{sec:overfitting}
+
+Overfitting can happen at two levels, and we did not check both equally well.
+
+\begin{itemize}
+  \item \textbf{Overfitting the validation folds: checked.} The 95 Optuna
+  trials and the thresholds were all chosen on the same 5 folds, so the best
+  CV scores are optimistic by construction. The untouched test set measures by
+  how much: every model loses about 0.01 AP (logistic regression 0.784 to
+  0.773, random forest 0.814 to 0.805, LightGBM 0.832 to 0.821), and the
+  ranking does not change (Section~\ref{sec:test}). This is the drop expected
+  from selection, not a sign that the models were fitted to the folds.
+  \item \textbf{Memorizing the training rows: checked for the logistic
+  regression only.} For the logistic regression we measured the train and
+  validation AP directly: the gap stays below 0.004 even with almost no
+  penalty (Section~\ref{sec:regularization}). For the two tree models we
+  never computed a training score, so we cannot say how far they fit their
+  training rows. The evidence is indirect. The untuned random forest, whose
+  leaves are pure, is the worst model (log-loss 0.446); limiting its depth and
+  leaf size raised its CV AP by 0.064, which is what reducing overfitting
+  looks like. LightGBM's 350 trees were chosen by CV rather than by early
+  stopping on a validation curve.
+\end{itemize}
+
+For tree ensembles, a training score above the validation score is normal and
+not a problem in itself: what matters is that the validation and test scores
+hold, and they do. We are therefore confident that overfitting does not hurt
+the results we report, but we did not measure its size for the random forest
+and LightGBM. A table of train, validation and test AP for the three models,
+and a LightGBM learning curve, would close this gap.
+
 \subsection{Limitations}
 
 \begin{itemize}
+  \item \textbf{Overfitting of the tree models not measured directly}
+  (Section~\ref{sec:overfitting}).
   \item \textbf{Old data.} The census dates from 1994. Incomes, jobs and the
   meaning of the \$50K threshold have changed since, so the model would need to
   be retrained on recent data before any use.
