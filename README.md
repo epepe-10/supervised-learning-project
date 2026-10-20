@@ -1,4 +1,4 @@
-﻿# Supervised Learning & Model Engineering: Project
+# Supervised Learning & Model Engineering: Project
 
 End-to-end supervised learning proof of concept for tabular binary classification, going from raw data to a tuned, explained and calibrated final model evaluated on an untouched test set.
 
