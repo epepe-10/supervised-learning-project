@@ -104,5 +104,10 @@ downstream use that reads them as real chances (an expected number of \pos{}
 people, a score shown to a user) would over-estimate. Two fixes are possible:
 set \code{scale\_pos\_weight} to 1 and tune again, or recalibrate the
 probabilities after training (Platt scaling or isotonic regression, fitted on
-out-of-fold predictions). \todo{team decision: say which fix we would apply,
-or apply one.}
+out-of-fold predictions). We would choose the first: fix
+\code{scale\_pos\_weight} to 1 in the search space. Table~\ref{tab:spw} shows
+that it costs nothing in ranking or decisions (same AP, same F1) and brings
+the ECE from 0.051 down to 0.005, without adding a calibration step to the
+Pipeline. We did not apply it, because the test set had already been used to
+evaluate the frozen models (Section~\ref{sec:test}): changing the model
+afterwards would have required a second look at the test set.
