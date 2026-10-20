@@ -164,6 +164,30 @@ LightGBM            & Most frequent & 0.8307 & 0.0014 & 0.9289 & 0.7314 \\
 \end{tabular}
 \end{table}
 
+\begin{table}[H]
+\centering
+\caption{Reliability table of the final model (10 equal-width bins,
+out-of-fold on the development set). Gap = mean prediction $-$ observed share.}
+\label{tab:bins}
+\small
+\begin{tabular}{rrrrr}
+\toprule
+Bin & Mean prediction & Observed share & Gap & People \\
+\midrule
+0.0--0.1 & 0.023 & 0.014 & $+0.010$ & 19{,}171 \\
+0.1--0.2 & 0.145 & 0.103 & $+0.042$ & 3{,}180 \\
+0.2--0.3 & 0.248 & 0.179 & $+0.069$ & 2{,}270 \\
+0.3--0.4 & 0.351 & 0.241 & $+0.110$ & 1{,}824 \\
+0.4--0.5 & 0.450 & 0.316 & $+0.134$ & 2{,}046 \\
+0.5--0.6 & 0.550 & 0.391 & $+0.159$ & 1{,}961 \\
+0.6--0.7 & 0.649 & 0.512 & $+0.137$ & 1{,}712 \\
+0.7--0.8 & 0.752 & 0.620 & $+0.132$ & 1{,}923 \\
+0.8--0.9 & 0.846 & 0.762 & $+0.084$ & 1{,}825 \\
+0.9--1.0 & 0.979 & 0.974 & $+0.005$ & 3{,}120 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Additional figures}
 
 \begin{figure}[H]
@@ -222,4 +246,32 @@ of non-zero coefficients. Dashed line: the tuned $C$.}
 \caption{ROC and precision-recall curves of the three tuned models on the test
 set.}
 \label{fig:test-roc-pr}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{test_confusion.png}
+\caption{Confusion matrices on the test set, at the frozen threshold of each
+model.}
+\label{fig:test-confusion}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{mlflow_lightgbm_trials.png}
+\caption{MLflow: the trials of the LightGBM tuning study, sorted by mean CV AP
+(\code{cv\_ap\_mean}). Trial 2 is the best, with 0.833.}
+\label{fig:mlflow}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.48\textwidth]{shap_local_most_likely_above_50k.png}\hfill
+\includegraphics[width=0.48\textwidth]{shap_local_least_likely_above_50k.png}\\[4pt]
+\includegraphics[width=0.48\textwidth]{shap_local_borderline.png}
+\caption{SHAP waterfall plots of the most confident \pos{} (top left), the most
+confident \negc{} (top right) and the person closest to the threshold
+(bottom): from the base value, each feature pushes the score up (red) or down
+(blue) until the final prediction.}
+\label{fig:shap-local}
 \end{figure}

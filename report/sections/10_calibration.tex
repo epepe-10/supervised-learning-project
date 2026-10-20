@@ -9,77 +9,45 @@ whether a predicted 0.7 means that about 70\% of such people really earn \pos.
 on the development set: each person is predicted by a model that did not train
 on them, and the test set stays untouched. The reliability diagram groups the
 predictions into 10 equal-width bins and compares, in each bin, the mean
-predicted probability with the observed share of \pos; a histogram next to it
-shows how many people fall in each bin. Two summary scores complete it (lower
-is better for both):
-\begin{itemize}
-  \item the \textbf{Brier score}, the mean squared error between the predicted
-  probability and the 0/1 outcome. As a reference, always predicting the
-  prevalence gives $0.239 \times 0.761 = 0.182$;
-  \item the \textbf{expected calibration error},
-  $\text{ECE} = \sum_m \frac{|B_m|}{n}\,\lvert \text{acc}(B_m) -
-  \text{conf}(B_m) \rvert$: the gap between observed share and mean prediction
-  in each bin $B_m$, weighted by the share of people in that bin.
-\end{itemize}
+predicted probability with the observed share of \pos. Two scores complete it
+(lower is better): the \textbf{Brier score}, the mean squared error between the
+predicted probability and the 0/1 outcome (always predicting the prevalence
+gives $0.239 \times 0.761 = 0.182$), and the \textbf{expected calibration
+error}, $\text{ECE} = \sum_m \frac{|B_m|}{n}\,\lvert \text{acc}(B_m) -
+\text{conf}(B_m) \rvert$, the gap between observed share and mean prediction in
+each bin $B_m$, weighted by its share of people.
 
 \paragraph{Results.} On the 39{,}032 out-of-fold predictions of LightGBM, the
 Brier score is 0.092, half of the 0.182 of the constant prediction, and the ECE
-is 0.049 (Figure~\ref{fig:calibration}, Table~\ref{tab:bins}). The histogram
-shows that half of the people (19{,}171) get a probability below 0.1, where the
-model is nearly calibrated. The gaps are largest in the middle of the range:
-around 0.55, the model predicts 55\% where only 39\% of the people earn \pos.
-Over all the people, the mean prediction is 0.289 against an observed share of
-0.239.
-
-\begin{table}[H]
-\centering
-\caption{Reliability table of the final model (10 equal-width bins,
-out-of-fold on the development set). Gap = mean prediction $-$ observed share.}
-\label{tab:bins}
-\begin{tabular}{rrrrr}
-\toprule
-Bin & Mean prediction & Observed share & Gap & People \\
-\midrule
-0.0--0.1 & 0.023 & 0.014 & $+0.010$ & 19{,}171 \\
-0.1--0.2 & 0.145 & 0.103 & $+0.042$ & 3{,}180 \\
-0.2--0.3 & 0.248 & 0.179 & $+0.069$ & 2{,}270 \\
-0.3--0.4 & 0.351 & 0.241 & $+0.110$ & 1{,}824 \\
-0.4--0.5 & 0.450 & 0.316 & $+0.134$ & 2{,}046 \\
-0.5--0.6 & 0.550 & 0.391 & $+0.159$ & 1{,}961 \\
-0.6--0.7 & 0.649 & 0.512 & $+0.137$ & 1{,}712 \\
-0.7--0.8 & 0.752 & 0.620 & $+0.132$ & 1{,}923 \\
-0.8--0.9 & 0.846 & 0.762 & $+0.084$ & 1{,}825 \\
-0.9--1.0 & 0.979 & 0.974 & $+0.005$ & 3{,}120 \\
-\bottomrule
-\end{tabular}
-\end{table}
+is 0.049 (Figure~\ref{fig:calibration}; per-bin values in
+Table~\ref{tab:bins}, appendix). Below 0.1, where half of the people fall, the
+model is nearly calibrated; around 0.55, it predicts 55\% where only 39\% earn
+\pos. The mean prediction is 0.289 against an observed share of 0.239.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{calibration_reliability.png}
+\includegraphics[width=0.7\textwidth]{calibration_reliability.png}
 \caption{Reliability diagram (left) and histogram of the predicted
 probabilities (right) of the final model, out-of-fold on the development set.}
 \label{fig:calibration}
 \end{figure}
 
-\paragraph{Over- or under-confident?} The curve lies below the diagonal: in each
-bin, the model predicts a higher probability of \pos{} than the share
-observed. The gap is positive in all ten bins of Table~\ref{tab:bins}, from
-$+0.005$ at the top of the range to $+0.159$ around 0.55. The model systematically over-estimates the chance of \pos, most of
-all in the middle of the range: it is over-confident in its \pos{}
-predictions.
+\paragraph{Over- or under-confident?} The curve lies below the diagonal, with a
+positive gap in all ten bins (from $+0.005$ to $+0.159$): the model is
+over-confident in its \pos{} predictions, most of all in the middle of the
+range.
 
 \paragraph{Why: the class weight.} Optuna kept \code{scale\_pos\_weight}
-$= 1.80$ for LightGBM. A class weight makes each \pos{}
-person count more during training, which shifts all the probabilities up. To
-check that this is the cause, we compared two untuned LightGBM models that
-differ only by this weight (Table~\ref{tab:spw}).
+$= 1.80$ for LightGBM, which makes each \pos{} person count more during
+training and shifts all the probabilities up. To check this, we compared two
+untuned LightGBM models that differ only by this weight (Table~\ref{tab:spw}).
 
 \begin{table}[H]
 \centering
 \caption{Untuned LightGBM with and without class weight (5-fold out-of-fold,
 development set). The observed share of \pos{} is 0.239.}
 \label{tab:spw}
+\small
 \begin{tabular}{lrrrrr}
 \toprule
 \code{scale\_pos\_weight} & AP & F1 (tuned thr.) & Brier & ECE & Mean prediction \\
@@ -90,24 +58,17 @@ development set). The observed share of \pos{} is 0.239.}
 \end{tabular}
 \end{table}
 
-The weight changes neither the ranking (same AP) nor the decisions (same F1,
-once the threshold is tuned), but it multiplies the ECE by eleven and raises
-the mean prediction from 0.239 to 0.291. This is consistent with
-Section~\ref{sec:imbalance}: AP only depends on the order of the scores, so
-Optuna had no reason to prefer one weight over another, and the tuned
-threshold already handles the imbalance.
+The weight changes neither the ranking (same AP) nor the decisions (same F1),
+but it multiplies the ECE by eleven: AP only depends on the order of the
+scores, so Optuna had no reason to prefer one weight over another.
 
 \paragraph{Would we trust the probabilities as-is?} For the decisions, yes: the
 threshold was chosen on these same, shifted probabilities, so the \pos{} /
 \negc{} decisions are consistent. For the probabilities themselves, no: any
-downstream use that reads them as real chances (an expected number of \pos{}
-people, a score shown to a user) would over-estimate. Two fixes are possible:
-set \code{scale\_pos\_weight} to 1 and tune again, or recalibrate the
-probabilities after training (Platt scaling or isotonic regression, fitted on
-out-of-fold predictions). We would choose the first: fix
-\code{scale\_pos\_weight} to 1 in the search space. Table~\ref{tab:spw} shows
-that it costs nothing in ranking or decisions (same AP, same F1) and brings
-the ECE from 0.051 down to 0.005, without adding a calibration step to the
-Pipeline. We did not apply it, because the test set had already been used to
-evaluate the frozen models (Section~\ref{sec:test}): changing the model
-afterwards would have required a second look at the test set.
+downstream use that reads them as real chances would over-estimate. Rather
+than recalibrating after training (Platt scaling or isotonic regression), we
+would fix \code{scale\_pos\_weight} to 1: it costs nothing in ranking or
+decisions and brings the ECE from 0.051 to 0.005 (Table~\ref{tab:spw}). We did
+not apply it because the test set had already been used
+(Section~\ref{sec:test}): changing the model afterwards would have required a
+second look at it.

@@ -3,32 +3,19 @@
 
 Every tuning trial and every final training is logged with MLflow, in a local
 database (\code{mlflow.db}, with the files in \code{mlruns/}), under a single
-experiment, \code{adult-income}. The runs are organised as follows:
+experiment, \code{adult-income}:
 \begin{itemize}
   \item \textbf{one parent run per tuning study} (e.g.\ ``lightgbm - tuning''):
-  the best hyperparameters, the best mean CV AP, and the files written by the
-  tuning as artifacts (best parameters, table of all trials, optimisation
-  history);
-  \item \textbf{one child run per Optuna trial} (e.g.\ ``lightgbm - trial
-  12''): the hyperparameters of the trial, the AP of each of the 5 folds, their
-  mean and their standard deviation. Logging the five folds, and not only the
-  mean, shows how much a score depends on the split;
+  the best hyperparameters, the best mean CV AP, and the tuning files as
+  artifacts (best parameters, table of all trials, optimisation history);
+  \item \textbf{one child run per Optuna trial}: its hyperparameters, the AP of
+  each of the 5 folds, their mean and standard deviation. Logging the five
+  folds, not only the mean, shows how much a score depends on the split;
   \item \textbf{one run per final training}: the tuned hyperparameters, the
-  out-of-fold metrics, the chosen threshold and the saved model file as an
-  artifact.
+  out-of-fold metrics, the chosen threshold and the saved model as an artifact.
 \end{itemize}
 In total, the 95 tuning trials (25 + 20 + 50), the 3 tuning studies and the 3
-final trainings are logged. Since the sampler and the folds are seeded,
-re-running the tuning with tracking switched on proposes the same trials: we
-checked that the best hyperparameters of the three models were identical after
-the re-run, and so were the frozen thresholds and the out-of-fold scores. The
-MLflow interface lets us sort and compare all the trials of a model and open
-the artifacts of any run (Figure~\ref{fig:mlflow}).
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{mlflow_lightgbm_trials.png}
-\caption{MLflow: the trials of the LightGBM tuning study, sorted by mean CV AP
-(\code{cv\_ap\_mean}). Trial 2 is the best, with 0.833.}
-\label{fig:mlflow}
-\end{figure}
+final trainings are logged (Figure~\ref{fig:mlflow}, appendix). Since the
+sampler and the folds are seeded, re-running the tuning with tracking switched
+on proposes the same trials: the best hyperparameters, the frozen thresholds
+and the out-of-fold scores of the three models were identical after the re-run.

@@ -84,14 +84,12 @@ set).}
 
 \subsection{Leakage audit and open questions}
 
-For each feature, we asked whether its value would really be known at the
-moment the prediction is made (Table~\ref{tab:leakage}, appendix). Personal
-characteristics, education, job and household are known in advance.
-\code{capital-gain} and \code{capital-loss} are a medium risk: they are declared
-for the same tax year as the income, so in production they might only become
-available together with the income itself. We keep them, because the census
-collects them at the same time as the other answers, but this must be checked
-before any real deployment. Two assumptions remain open: missing
+For each feature, we asked whether its value would be known when the
+prediction is made (Table~\ref{tab:leakage}, appendix). Only
+\code{capital-gain} and \code{capital-loss} are a medium risk: declared for the
+same tax year as the income, they might only become available with the income
+itself. We keep them, since the census collects them with the other answers,
+but this must be checked before any deployment. Two assumptions remain open: missing
 \code{workclass} and \code{occupation} values may describe people who do not
 work (tested in Section~\ref{sec:discussion}), and the data dates from 1994, so
 the model should not be used on recent data without retraining.

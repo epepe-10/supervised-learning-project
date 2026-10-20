@@ -25,12 +25,9 @@ Pipeline, so they are recomputed for any new row.
 \paragraph{What they bought.} On the untuned logistic regression (5-fold
 out-of-fold predictions, threshold 0.5), the three features raise ROC-AUC from
 0.905 to 0.913, AP from 0.763 to 0.784 and F1 from 0.657 to 0.673: about seven
-times the standard deviation of AP across folds (0.003). Tree models can learn
-such shapes by themselves; we kept the features for all three models so that
-every model sees the same inputs, and SHAP shows that LightGBM still uses two
-of them (Section~\ref{sec:shap}). \code{age} and \code{age\_squared} are
-strongly correlated: with a regularized model this does not hurt the
-predictions, but their coefficients and SHAP values must be read together.
+times the standard deviation of AP across folds (0.003). We kept them for all
+three models so that every model sees the same inputs; SHAP shows that
+LightGBM still uses two of them (Section~\ref{sec:shap}).
 
 \subsection{Missing values and encoding}
 

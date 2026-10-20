@@ -59,14 +59,12 @@ LightGBM & 350 trees, learning rate $0.048$, 26 leaves,
 
 \begin{itemize}
   \item \textbf{Edges of the ranges.} Only \code{max\_features} $= 0.60$ for
-  the random forest landed on a bound (the upper one). Letting each split see
-  more features might still help the forest a little; we did not extend the
-  range because the forest stays well behind LightGBM.
-  \item \textbf{Class weighting.} Optuna made three different choices: no
-  weight for the logistic regression, \code{"balanced"} for the random forest,
-  and 1.80 for LightGBM, about half of the class ratio (3.2). Since the
-  threshold is tuned afterwards, the weight is just one more hyperparameter,
-  kept only when it improves AP.
+  the random forest landed on a bound; we did not extend it, since the forest
+  stays well behind LightGBM.
+  \item \textbf{Class weighting.} No weight for the logistic regression,
+  \code{"balanced"} for the forest, 1.80 for LightGBM: since the threshold is
+  tuned afterwards, the weight is one more hyperparameter, kept when it helps
+  AP.
   \item \textbf{A flat optimum for LightGBM.} Its best trial is trial 2: the 47
   following trials did not beat it (Figure~\ref{fig:lgbm-history}, appendix).
   Below a learning rate of 0.02, even 1{,}000 trees do not finish learning
@@ -80,25 +78,16 @@ LightGBM & 350 trees, learning rate $0.048$, 26 leaves,
 \subsection{What the penalty does to the logistic regression}
 \label{sec:regularization}
 
-We computed the regularization path of the logistic regression: train and
-validation AP (5-fold CV) for $C$ from $10^{-4}$ to 100, with
-\code{l1\_ratio} kept at 0.77 (Figure~\ref{fig:regularization-path},
-appendix), with the script \code{src/regularization.py}.
-\begin{itemize}
-  \item \textbf{Sparsity.} The L1 part of the tuned penalty sets 9 of the 91
-  coefficients exactly to zero: seven rare \code{native-country} categories,
-  \code{workclass} = Never-worked, and \code{relationship} = Not-in-family,
-  redundant once marital status is known. A Ridge penalty would only have
-  shrunk them.
-  \item \textbf{Strong penalty = underfitting.} At $C = 10^{-4}$ every
-  coefficient is zero and the model predicts the base rate (AP 0.24). As $C$
-  grows, the model keeps more coefficients (7 at $C = 10^{-3}$, 39 at
-  $C = 0.1$) and AP rises quickly.
-  \item \textbf{Weak penalty does not overfit here.} Above $C \approx 0.1$ the
-  validation AP is flat (0.782 to 0.784), and the train--validation gap stays
-  below 0.004 even at $C = 100$: with 39{,}000 rows for 91 coefficients, the
-  model cannot memorize its training folds. The tuned $C = 1.89$ lies in this
-  flat region, which is why tuning did not improve the model. If a short,
-  readable model mattered more, $C = 0.1$ would keep 39 coefficients for only
-  0.002 AP less.
-\end{itemize}
+The regularization path (train and validation AP for $C$ from $10^{-4}$ to
+100, \code{l1\_ratio} = 0.77; Figure~\ref{fig:regularization-path}, appendix)
+shows three things. \textbf{Sparsity:} the L1 part of the tuned penalty sets 9
+of the 91 coefficients exactly to zero (seven rare \code{native-country}
+categories, \code{workclass} = Never-worked, \code{relationship} =
+Not-in-family), where Ridge would only shrink them. \textbf{Strong penalty =
+underfitting:} at $C = 10^{-4}$ every coefficient is zero and the model
+predicts the base rate (AP 0.24). \textbf{Weak penalty does not overfit
+here:} above $C \approx 0.1$ the validation AP is flat (0.782 to 0.784) and
+the train--validation gap stays below 0.004 even at $C = 100$, since 39{,}000
+rows cannot be memorized by 91 coefficients. The tuned $C = 1.89$ lies in this
+flat region, which is why tuning did not improve the model; $C = 0.1$ would
+give a shorter model (39 coefficients) for only 0.002 AP less.

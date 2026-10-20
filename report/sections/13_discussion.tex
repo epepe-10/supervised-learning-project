@@ -3,76 +3,49 @@
 
 \subsection{An alternative we tested: a ``missing'' category}
 
-The analysis left an open question (Section~\ref{sec:eda}): are the missing job
-values random? On the development set, the 2{,}233 people with a missing
-\code{workclass} all have a missing \code{occupation} too (2{,}241 missing
-occupations in total: the other 8 people never worked), and only 9.4\% of the
-people with a missing occupation earn \pos, against 23.9\% overall: they are
-mostly people without a job. The most-frequent imputation hides this, since it
-gives them the most common job (\code{Private}, \code{Prof-specialty}).
-Imputing a separate ``missing'' category keeps the information. On the untuned
-models (Table~\ref{tab:missing}, appendix), it gains 0.003 AP for the logistic
-regression and 0.001 for LightGBM, with no change in F1 for LightGBM: of the
-order of the variation of AP across folds. Adopting it would have meant
-re-running the whole tuning for no measurable gain, so we kept the
-most-frequent imputation. A separate category remains the more principled
-choice for a model in production, because it does not invent a job for people
-who have none.
+Are the missing job values random (Section~\ref{sec:eda})? On the development
+set, the 2{,}233 people with a missing \code{workclass} all have a missing
+\code{occupation} too, and only 9.4\% of the people with a missing occupation
+earn \pos, against 23.9\% overall: they are mostly people without a job, whom
+the most-frequent imputation gives the most common job. A separate ``missing''
+category keeps this information, but on the untuned models it gains only 0.003
+AP for the logistic regression and 0.001 for LightGBM, with the same F1
+(Table~\ref{tab:missing}, appendix): of the order of the fold-to-fold
+variation, so we kept the most-frequent imputation rather than re-run the
+tuning; a separate category remains more principled in production.
 
 \subsection{Overfitting: what we checked and what we did not}
 \label{sec:overfitting}
 
-\begin{itemize}
-  \item \textbf{Overfitting the validation folds: checked.} The 95 Optuna
-  trials and the thresholds were all chosen on the same 5 folds, so the best
-  CV scores are optimistic by construction. The untouched test set measures by
-  how much: every model loses about 0.01 AP (logistic regression 0.784 to
-  0.773, random forest 0.814 to 0.805, LightGBM 0.832 to 0.821), and the
-  ranking does not change. This is the drop expected from selection.
-  \item \textbf{Memorizing the training rows: checked for the logistic
-  regression only.} Its train--validation gap stays below 0.004 even with
-  almost no penalty (Section~\ref{sec:regularization}). For the two tree
-  models we never computed a training score. The evidence is indirect: the
-  untuned random forest, whose leaves are pure, is the worst model, and
-  limiting its depth and leaf size raised its CV AP by 0.064, which is what
-  reducing overfitting looks like; LightGBM's 350 trees were chosen by CV
-  rather than by early stopping.
-\end{itemize}
-For tree ensembles, a training score above the validation score is normal:
-what matters is that the validation and test scores hold, and they do. A table
-of train, validation and test AP for the three models, and a LightGBM learning
-curve, would measure the size of the gap.
+\textbf{Overfitting the validation folds: checked.} The 95 trials and the
+thresholds were chosen on the same 5 folds, so the best CV scores are
+optimistic by construction. The test set measures by how much: every model
+loses about 0.01 AP (LightGBM 0.832 to 0.821) and the ranking does not change.
+\textbf{Memorizing the training rows: checked for the logistic regression
+only}, whose train--validation gap stays below 0.004
+(Section~\ref{sec:regularization}). For the tree models we never computed a
+training score; the evidence is indirect (limiting the forest's depth and leaf
+size raised its CV AP by 0.064, and the test scores hold). A table of train,
+validation and test AP, and a LightGBM learning curve, would measure the gap.
 
 \subsection{Limitations}
 
-\begin{itemize}
-  \item \textbf{Old data.} The census dates from 1994; incomes, jobs and the
-  meaning of \$50K have changed, so the model would need retraining on recent
-  data.
-  \item \textbf{Possible leakage.} \code{capital-gain} and \code{capital-loss}
-  are declared for the same tax year as the income (Section~\ref{sec:eda}).
-  \item \textbf{F1 stands in for business costs.} With real costs for each
-  type of error, the threshold should minimize the expected cost instead.
-  \item \textbf{Threshold chosen on fold models.} It comes from the
-  out-of-fold probabilities of five models trained on 80\% of the development
-  set, and is applied to a model refitted on all of it; their scores are close
-  but not identical.
-  \item \textbf{Probabilities not calibrated} as-is
-  (Section~\ref{sec:calibration}), and overfitting of the tree models not
-  measured directly (Section~\ref{sec:overfitting}).
-  \item \textbf{No fairness audit.} The model uses \code{sex} and \code{race}
-  as inputs, and the share of \pos{} is 30\% for men against 11\% for women.
-  The audit was removed from the scope, so we did not check whether errors are
-  spread equally across groups; this would be needed before any real use.
-\end{itemize}
+\textbf{Old data:} the census dates from 1994, so the model would need
+retraining on recent data. \textbf{Possible leakage:} \code{capital-gain} and
+\code{capital-loss} are declared for the same tax year as the income.
+\textbf{F1 stands in for business costs:} with real costs per error, the
+threshold should minimize the expected cost. \textbf{Threshold chosen on fold
+models} trained on 80\% of the development set, then applied to the refitted
+model. \textbf{Probabilities not calibrated} as-is
+(Section~\ref{sec:calibration}). \textbf{No fairness audit:} the model uses
+\code{sex} and \code{race}, and the share of \pos{} is 30\% for men against
+11\% for women; the audit was out of scope, but would be needed before any
+real use.
 
 \subsection{Conclusion}
 
-Our final model is a tuned LightGBM inside a single scikit-learn Pipeline. On
-the untouched test set it reaches an AP of 0.821 and an F1 of 0.722 at its
-frozen threshold of 0.54, within 0.01 of its cross-validation scores. What
-mattered most was the choice of model (LightGBM is about 0.05 AP ahead of the
-logistic regression), then the decision threshold, then the engineered
-features. Its decisions are reliable, but its raw probabilities are
-over-estimated because of the class weight, so they should be recalibrated
-before being read as true chances (Section~\ref{sec:calibration}).
+Our final model, a tuned LightGBM in one Pipeline, reaches an AP of 0.821 and
+an F1 of 0.722 on the untouched test set, within 0.01 of cross-validation.
+What mattered most was the model (+0.05 AP over the logistic regression), then
+the decision threshold, then the engineered features. Its decisions are reliable; its probabilities, inflated by the
+class weight, need recalibrating (Section~\ref{sec:calibration}).
