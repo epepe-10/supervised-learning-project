@@ -1,4 +1,4 @@
-# Supervised Learning & Model Engineering: Project
+﻿# Supervised Learning & Model Engineering: Project
 
 End-to-end supervised learning proof of concept for tabular binary classification, going from raw data to a tuned, explained and calibrated final model evaluated on an untouched test set.
 
@@ -87,4 +87,4 @@ mlflow ui                       # then open http://127.0.0.1:5000
 - [x] Experiment tracking
 - [x] Explainability (SHAP)
 - [x] Calibration diagnostics
-- [ ] Final evaluation on the test set
+- [x] Final evaluation on the test set
