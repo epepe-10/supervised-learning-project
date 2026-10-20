@@ -1,7 +1,89 @@
-\section{Additional material}
-\label{sec:appendix}
+\section{The three models in equations}
+\label{sec:model-details}
 
-\subsection{Optuna search spaces}
+\paragraph{Logistic regression.} The model computes a linear score and turns
+it into a probability with the sigmoid:
+\[
+  p(x) = \sigma(z) = \frac{1}{1 + e^{-z}}, \qquad
+  z = \beta_0 + \sum_j \beta_j x_j = \log\frac{p}{1-p}.
+\]
+It is linear in the log-odds, not in the probability, so its decision boundary
+$z = \text{const}$ is a hyperplane in the feature space: curves, thresholds and
+interactions must be given to it as features (Section~\ref{sec:features}). The
+coefficients minimize the log-loss (the negative log-likelihood) plus the
+Elastic Net penalty:
+\[
+  \min_\beta \; -\frac{1}{n}\sum_{i=1}^n \bigl[y_i \log p_i + (1-y_i)\log(1-p_i)\bigr]
+  + \lambda \Bigl[\alpha \lVert\beta\rVert_1 + \tfrac{1-\alpha}{2}\lVert\beta\rVert_2^2\Bigr],
+\]
+with $\alpha$ = \code{l1\_ratio} and $\lambda = 1/C$ (scikit-learn writes the
+same trade-off with $C$ in front of the loss). A coefficient adds $\beta_j$ to
+the log-odds, i.e.\ multiplies the odds by $e^{\beta_j}$, other columns held
+fixed. Since the one-hot encoding keeps both \code{sex} columns, the effect of
+being a woman rather than a man is the difference of the two coefficients:
+$-1.87 - (-1.13) = -0.74$, so the odds of \pos{} are multiplied by
+$e^{-0.74} \approx 0.48$ at equal age, education, job and hours. The effect is
+constant on the odds, not on the probability, because the sigmoid is not
+linear.
+
+\paragraph{How a tree chooses its splits.} A node is \emph{pure} when all its
+rows belong to the same class. With $p$ the share of \pos{} in the node, the
+two usual impurity measures are
+\[
+  \text{Gini} = 1 - \sum_k p_k^2 = 2p(1-p),
+  \qquad
+  \text{Entropy} = -\sum_k p_k \log_2 p_k .
+\]
+Both are 0 for a pure node and largest at $p = 0.5$. At the root of our trees,
+$p = 0.24$, so Gini $= 0.365$ and entropy $= 0.795$ bits. At each node, the tree
+keeps the candidate split that most reduces the impurity, weighted by the
+number of rows in each child (with entropy, this reduction is the
+\emph{information gain}). The two measures almost always pick the same splits;
+we kept scikit-learn's default, Gini, which is faster (no logarithm), and did
+not tune it. Left alone, the tree keeps splitting until every leaf is pure,
+i.e.\ until it has memorized its training rows, which is why the forest's
+\code{max\_depth} and \code{min\_samples\_leaf} matter. LightGBM does not use an
+impurity measure: it picks the split that most reduces the log-loss, computed
+from the gradients of the loss, and its L2 penalty \code{reg\_lambda} enters
+that gain directly.
+
+\paragraph{How boosting corrects its errors.} LightGBM builds an additive model
+on the log-odds scale. It starts from a constant $F_0$ (the log-odds of the
+base rate), then, at each round $m$, fits a small tree $T_m$ to the negative
+gradient of the log-loss with respect to the current score, which is simply
+$r_i = y_i - p_i$: positive when the model underestimates a \pos{} person,
+negative when it overestimates a \negc{} one. The tree is added with a learning
+rate $\eta$:
+\[
+  F_m(x) = F_{m-1}(x) + \eta\, T_m(x), \qquad
+  p(x) = \sigma\bigl(F_M(x)\bigr).
+\]
+A small $\eta$ makes each correction cautious and needs more trees, so the two
+are tuned together; our tuned model uses $\eta = 0.048$ and 350 trees. The
+random forest averages independent deep trees, which mainly reduces the
+variance, while boosting adds corrections one after the other, which mainly
+reduces the bias but can overfit with too many or too complex trees.
+
+\section{Additional tables}
+
+\begin{table}[H]
+\centering
+\caption{Leakage audit: could we know this value when the prediction is made?}
+\label{tab:leakage}
+\small
+\begin{tabular}{p{4.6cm}p{2.4cm}p{2.2cm}p{5.2cm}}
+\toprule
+Features & Known at prediction time & Risk & Why \\
+\midrule
+age, sex, race, native-country & Yes & Low & Fixed personal characteristics \\
+education-num & Yes & Low & Obtained before the income is earned \\
+workclass, occupation, hours-per-week & Yes & Low & Describe the current job \\
+marital-status, relationship & Yes & Low & Household situation \\
+capital-gain, capital-loss & Same tax year & Medium & Declared with the income \\
+fnlwgt & Yes & Not a person feature & Survey weight, dropped \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[H]
 \centering
@@ -35,7 +117,54 @@ LightGBM (50) & \code{n\_estimators} & 100 to 1000, step 50 \\
 \end{tabular}
 \end{table}
 
-\subsection{Exploratory figures}
+\begin{table}[H]
+\centering
+\caption{The hyperparameters selected for the final model (LightGBM) and what
+they control.}
+\label{tab:lgbm-params}
+\small
+\begin{tabular}{lrp{8.3cm}}
+\toprule
+Hyperparameter & Value & What it controls \\
+\midrule
+\code{n\_estimators}, \code{learning\_rate} & 350, 0.048 & Number of trees and
+weight $\eta$ of each correction: many small steps rather than a few large
+ones (Appendix~\ref{sec:model-details}). \\
+\code{num\_leaves} & 26 & Complexity of each tree (LightGBM grows trees
+leaf-wise, so it limits leaves rather than depth). \\
+\code{min\_child\_samples} & 11 & Minimum number of rows in a leaf: no rule
+built on a handful of people. \\
+\code{subsample}, \code{colsample\_bytree} & 0.81, 0.57 & Share of rows and of
+columns each tree sees: randomness that decorrelates the trees and limits
+overfitting. \\
+\code{reg\_lambda} & 0.015 & L2 penalty on the leaf values; almost none was
+needed. \\
+\code{scale\_pos\_weight} & 1.80 & Weight of a \pos{} person in the loss, about
+half of the class ratio (3.2); it shifts the probabilities up
+(Section~\ref{sec:calibration}). \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Most-frequent imputation against a ``missing'' category for the
+categorical columns (untuned models, 5-fold out-of-fold, development set).}
+\label{tab:missing}
+\begin{tabular}{llrrrr}
+\toprule
+Model & Imputation & AP & AP std & ROC-AUC & F1 (tuned thr.) \\
+\midrule
+Logistic regression & Most frequent & 0.7839 & 0.0032 & 0.9125 & 0.6992 \\
+                    & ``missing''   & 0.7864 & 0.0039 & 0.9136 & 0.7013 \\
+\midrule
+LightGBM            & Most frequent & 0.8307 & 0.0014 & 0.9289 & 0.7314 \\
+                    & ``missing''   & 0.8318 & 0.0020 & 0.9295 & 0.7313 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Additional figures}
 
 \begin{figure}[H]
 \centering
@@ -52,4 +181,45 @@ densities).}
 set). The dashed line is the overall share. For \code{native-country}, only the
 15 most frequent countries are shown.}
 \label{fig:eda-categorical}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{baseline_confusion_default.png}\\[4pt]
+\includegraphics[width=0.9\textwidth]{baseline_confusion_tuned.png}
+\caption{Out-of-fold confusion matrices of the untuned models, at the threshold
+0.5 (top) and at the threshold that maximizes F1 (bottom).}
+\label{fig:confusion-baseline}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{baseline_roc_pr.png}
+\caption{ROC and precision-recall curves of the untuned models (out-of-fold,
+development set). Dashed lines: a random model.}
+\label{fig:roc-pr-baseline}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{lightgbm_history.png}
+\caption{Mean CV AP of each Optuna trial for LightGBM.}
+\label{fig:lgbm-history}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{regularization_path.png}
+\caption{Regularization path of the logistic regression (\code{l1\_ratio} =
+0.77). Left: mean train and validation AP over the 5 folds. Right: mean number
+of non-zero coefficients. Dashed line: the tuned $C$.}
+\label{fig:regularization-path}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{test_roc_pr.png}
+\caption{ROC and precision-recall curves of the three tuned models on the test
+set.}
+\label{fig:test-roc-pr}
 \end{figure}

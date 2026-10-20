@@ -3,39 +3,26 @@
 
 All the preprocessing and the model are wrapped in one scikit-learn
 \code{Pipeline}, which takes a raw census row and returns $P(\pos)$:
-\begin{enumerate}
-  \item \code{FunctionTransformer(add\_features)} adds the three engineered
-  features. It is stateless (Section~\ref{sec:features}).
-  \item A \code{ColumnTransformer} applies one recipe per type of column:
-  \begin{itemize}
-    \item numerical columns: \code{SimpleImputer(strategy="median")}, then
-    \code{StandardScaler};
-    \item categorical columns: \code{SimpleImputer(strategy="most\_frequent")},
-    then \code{OneHotEncoder(handle\_unknown="ignore")};
-    \item \code{education} and \code{fnlwgt} are dropped
-    (\code{remainder="drop"}).
-  \end{itemize}
-  \item The classifier: logistic regression, random forest or LightGBM.
-\end{enumerate}
-
-\paragraph{Why one Pipeline.}
+(1) a stateless \code{FunctionTransformer} adds the three engineered features;
+(2) a \code{ColumnTransformer} applies median imputation and
+\code{StandardScaler} to the numerical columns, most-frequent imputation and
+\code{OneHotEncoder(handle\_unknown="ignore")} to the categorical ones, and
+drops \code{education} and \code{fnlwgt} (\code{remainder="drop"}); (3) the
+classifier. One Pipeline brings four guarantees.
 \begin{itemize}
-  \item \textbf{No leakage during cross-validation.} The Pipeline is defined
-  once, and a fresh, unfitted copy (\code{clone}) is fitted in each fold. The
-  medians, means, standard deviations and categories are therefore learned on
-  the four training folds only; the validation fold is only used to predict.
-  Imputing or scaling the whole development set before cross-validation would
-  have let each validation fold influence its own preprocessing.
-  \item \textbf{The same transformations everywhere.} The exact same object is
-  used in cross-validation, refitted on the whole development set, evaluated
-  on the test set and saved with its threshold to score new rows.
-  There is no second implementation of the preprocessing that could drift
+  \item \textbf{No leakage during cross-validation.} A fresh, unfitted copy
+  (\code{clone}) is fitted in each fold, so the medians, means, standard
+  deviations and categories are learned on the four training folds only.
+  Imputing or scaling the whole development set first would have let each
+  validation fold influence its own preprocessing.
+  \item \textbf{The same transformations everywhere.} The same object is
+  cross-validated, refitted on the whole development set, evaluated on the
+  test set and saved: no second implementation of the preprocessing can drift
   from the first one.
   \item \textbf{Tuning covers the whole chain.} Each Optuna trial builds and
   cross-validates a complete Pipeline (Section~\ref{sec:tuning}).
   \item \textbf{One file to deploy.} The fitted Pipeline is saved with
-  \code{joblib}, together with its decision threshold: both are needed to
-  turn a raw row into a decision. The Pipeline also returns the name of each
-  column the model sees (\code{get\_feature\_names\_out}), which the SHAP
-  analysis uses (Section~\ref{sec:shap}).
+  \code{joblib}, together with its decision threshold, since both are needed
+  to turn a raw row into a decision. It also returns the name of each encoded
+  column (\code{get\_feature\_names\_out}), which the SHAP analysis uses.
 \end{itemize}

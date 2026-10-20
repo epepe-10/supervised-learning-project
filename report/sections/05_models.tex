@@ -2,7 +2,9 @@
 \label{sec:models}
 
 We compared three models of increasing flexibility, inside the same Pipeline,
-on the same folds and with the same metrics.
+on the same folds and with the same metrics. Their equations (sigmoid and
+penalized log-loss, Gini and entropy splits, gradient boosting update) are in
+Appendix~\ref{sec:model-details}.
 \begin{enumerate}
   \item \textbf{Logistic regression}: linear in the log-odds, interpretable and
   probabilistic, which makes it a strong baseline. The \code{saga} solver
@@ -10,81 +12,14 @@ on the same folds and with the same metrics.
   Lasso, in between = Elastic Net) and $C = 1/\lambda$ its strength.
   \item \textbf{Random forest}: many deep trees, each trained on a bootstrap
   sample with a random subset of features at each split, then averaged.
-  Averaging decorrelated trees reduces the variance, and trees capture
-  non-linear effects and interactions without feature engineering.
-  \item \textbf{LightGBM}: gradient boosting. Trees are added one at a time,
-  each one correcting the errors of the current ensemble, and grown leaf-wise.
+  Averaging decorrelated trees mainly reduces the variance.
+  \item \textbf{LightGBM}: gradient boosting. Small trees are added one at a
+  time, each fitted to the errors of the current ensemble, which mainly reduces
+  the bias. We chose LightGBM over XGBoost or CatBoost, which implement the same
+  algorithm, because it is the fastest, which matters when each tuning trial
+  means five fits; CatBoost's strength, high-cardinality categories, does not
+  apply here (\code{native-country}, the largest, has about forty).
 \end{enumerate}
-
-\paragraph{The logistic regression in one equation.} The model computes a
-linear score and turns it into a probability with the sigmoid:
-\[
-  p(x) = \sigma(z) = \frac{1}{1 + e^{-z}}, \qquad
-  z = \beta_0 + \sum_j \beta_j x_j = \log\frac{p}{1-p}.
-\]
-It is linear in the log-odds, not in the probability, so its decision boundary
-$z = \text{const}$ is a hyperplane in the feature space: curves, thresholds and
-interactions must be given to it as features (Section~\ref{sec:features}). The
-coefficients minimize the log-loss (the negative log-likelihood) plus the
-Elastic Net penalty:
-\[
-  \min_\beta \; -\frac{1}{n}\sum_{i=1}^n \bigl[y_i \log p_i + (1-y_i)\log(1-p_i)\bigr]
-  + \lambda \Bigl[\alpha \lVert\beta\rVert_1 + \tfrac{1-\alpha}{2}\lVert\beta\rVert_2^2\Bigr],
-\]
-with $\alpha$ = \code{l1\_ratio} and $\lambda = 1/C$ (scikit-learn writes the
-same trade-off with $C$ in front of the loss). A coefficient adds $\beta_j$ to
-the log-odds, i.e.\ multiplies the odds by $e^{\beta_j}$, other columns held
-fixed. Since the one-hot encoding keeps both \code{sex} columns, the effect of
-being a woman rather than a man is the difference of the two coefficients:
-$-1.87 - (-1.13) = -0.74$, so the odds of \pos{} are multiplied by
-$e^{-0.74} \approx 0.48$ at equal age, education, job and hours. The effect is
-constant on the odds, not on the probability, because the sigmoid is not
-linear.
-
-\paragraph{How a tree chooses its splits.} A node is \emph{pure} when all its
-rows belong to the same class. Impurity measures how far a node is from that.
-With $p$ the share of >50K in the node, the two usual measures are
-\[
-  \text{Gini} = 1 - \sum_k p_k^2 = 2p(1-p),
-  \qquad
-  \text{Entropy} = -\sum_k p_k \log_2 p_k .
-\]
-Both are 0 for a pure node and largest at $p = 0.5$. At the root of our trees,
-$p = 0.24$, so Gini $= 0.365$ and entropy $= 0.795$ bits. At each node, the tree
-tries the candidate splits and keeps the one that most reduces the impurity,
-weighted by the number of rows in each child (with entropy, this reduction is
-the \emph{information gain}). The two measures almost always pick the same
-splits. We kept scikit-learn's default, Gini, which is faster because it has
-no logarithm, and did not tune it. Left alone, the tree keeps splitting until
-every leaf is pure, i.e.\ until it has memorized its training rows. This is why
-the forest's \code{max\_depth} and \code{min\_samples\_leaf} matter
-(Section~\ref{sec:tuning}). LightGBM does not use an impurity measure. It
-picks the split that most reduces the log-loss, computed from the gradients of
-the loss, and its L2 penalty \code{reg\_lambda} enters that gain directly.
-
-\paragraph{How boosting corrects its errors.} LightGBM builds an additive model
-on the log-odds scale. It starts from a constant $F_0$ (the log-odds of the
-base rate), then, at each round $m$, fits a small tree $T_m$ to the negative
-gradient of the log-loss with respect to the current score, which is simply
-$r_i = y_i - p_i$: positive when the model underestimates a \pos{} person,
-negative when it overestimates a \negc{} one. The tree is added with a learning
-rate $\eta$:
-\[
-  F_m(x) = F_{m-1}(x) + \eta\, T_m(x), \qquad
-  p(x) = \sigma\bigl(F_M(x)\bigr).
-\]
-A small $\eta$ makes each correction cautious and needs more trees, so the two
-are tuned together; our tuned model uses $\eta = 0.048$ and 350 trees
-(Section~\ref{sec:tuning}). The two ensembles attack different errors: the
-random forest averages independent deep trees, which mainly reduces the
-variance, while boosting adds corrections one after the other, which mainly
-reduces the bias but can overfit if there are too many or too complex trees.
-LightGBM, XGBoost and CatBoost all implement this same algorithm with
-different engineering choices. We used LightGBM, the course's working model,
-because it is the fastest of the three, which matters when each of the 50
-tuning trials means five fits. CatBoost's main strength, high-cardinality
-categorical features, does not apply here: our largest categorical column,
-\code{native-country}, has about forty categories.
 
 \subsection{Untuned models}
 
@@ -92,7 +27,8 @@ categorical features, does not apply here: our largest categorical column,
 \centering
 \caption{Untuned models, default hyperparameters (5-fold out-of-fold
 predictions on the development set). ``AP std'' is the standard deviation of AP
-across the 5 folds.}
+across the 5 folds. ROC and PR curves: Figure~\ref{fig:roc-pr-baseline}
+(appendix).}
 \label{tab:models-untuned}
 \small
 \setlength{\tabcolsep}{4pt}
@@ -108,30 +44,15 @@ LightGBM            & \textbf{0.929} & \textbf{0.831} & 0.001 & \textbf{0.275} &
 \end{tabular}
 \end{table}
 
-\paragraph{What each step bought.}
-\begin{itemize}
-  \item \textbf{Feature engineering} added 0.021 AP to the logistic regression
-  (Section~\ref{sec:features}).
-  \item \textbf{The untuned random forest is worse than the logistic
-  regression} (AP 0.750 against 0.784, log-loss 0.446). With the default
-  settings, the trees grow until each leaf is pure: they memorize the training
-  folds, and the averaged probabilities are poorly calibrated. The forest needs
-  its complexity to be tuned (depth, leaf size), which Section~\ref{sec:tuning}
-  does.
-  \item \textbf{LightGBM is the best model on every metric}: AP 0.831 (+0.047
-  over the logistic regression), ROC-AUC 0.929, log-loss 0.275 and F1 0.731.
-  The gaps between models (at least 0.03 AP) are about ten times larger than
-  the variation of AP across folds (at most 0.006), so the ranking is not an
-  artefact of the split.
-\end{itemize}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{baseline_roc_pr.png}
-\caption{ROC and precision-recall curves of the untuned models (out-of-fold,
-development set). Dashed lines: a random model.}
-\label{fig:roc-pr-baseline}
-\end{figure}
+\paragraph{What each step bought.} Feature engineering added 0.021 AP to the
+logistic regression (Section~\ref{sec:features}). The untuned random forest is
+\emph{worse} than the logistic regression (AP 0.750 against 0.784, log-loss
+0.446): with the default settings, its trees grow until each leaf is pure, so
+they memorize the training folds and the averaged probabilities are poorly
+calibrated. LightGBM is the best model on every metric: AP 0.831 (+0.047 over
+the logistic regression), ROC-AUC 0.929, log-loss 0.275 and F1 0.731. The gaps
+between models (at least 0.03 AP) are about ten times the variation of AP
+across folds (at most 0.006), so the ranking is not an artefact of the split.
 
 \subsection{Tuned models}
 
@@ -156,16 +77,13 @@ LightGBM            & \textbf{0.930} & \textbf{0.832} & \textbf{0.287} & \textbf
 \paragraph{What tuning bought.} Tuning mattered most where the defaults were
 worst. The random forest gains 0.064 AP (0.750 to 0.814) and 0.038 F1 once its
 depth and leaf size are limited: it stops memorizing the training folds and
-moves from last to second place. This is the bias--variance trade-off of the
-course: a deep tree with tiny leaves has low bias but high variance, a shallow
-one the opposite, and the tuned depth of 14 with at least 3 rows per leaf is
-the compromise chosen by cross-validation. The logistic regression does not move (AP
-0.784, F1 0.699): with only three hyperparameters and a linear decision
-boundary, the default settings were already close to its best. LightGBM gains
-almost nothing (AP 0.831 to 0.832), because its defaults were already well
-suited to this table. The ranking of the tuned models is the same on every
-metric except recall, where the balanced random forest is ahead.
-
-The final model is the one with the best out-of-fold AP after tuning:
-LightGBM. It is chosen on cross-validation only, before the
-test set is used.
+moves from last to second place. This is the bias--variance trade-off: a deep
+tree with tiny leaves has low bias but high variance, and the tuned depth of 14
+with at least 3 rows per leaf is the compromise chosen by cross-validation. The
+logistic regression does not move (AP 0.784, F1 0.699): with three
+hyperparameters and a linear boundary, its defaults were already close to its
+best (Section~\ref{sec:regularization}). LightGBM gains almost nothing (AP
+0.831 to 0.832), because its defaults were already well suited to this table.
+The ranking is the same on every metric except recall, where the balanced
+random forest is ahead. The final model is the one with the best out-of-fold AP
+after tuning, LightGBM, chosen before the test set is used.

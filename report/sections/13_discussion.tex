@@ -7,41 +7,20 @@ The analysis left an open question (Section~\ref{sec:eda}): are the missing job
 values random? On the development set, the 2{,}233 people with a missing
 \code{workclass} all have a missing \code{occupation} too (2{,}241 missing
 occupations in total: the other 8 people never worked), and only 9.4\% of the
-people with a missing occupation earn \pos, against 23.9\% overall. They are mostly people without a job.
-The most-frequent imputation hides this, since it gives them the most common
-job (\code{Private}, \code{Prof-specialty}). Imputing a separate ``missing''
-category keeps the information. We measured its effect on the untuned models
-(Table~\ref{tab:missing}).
-
-\begin{table}[H]
-\centering
-\caption{Most-frequent imputation against a ``missing'' category for the
-categorical columns (untuned models, 5-fold out-of-fold, development set).}
-\label{tab:missing}
-\begin{tabular}{llrrrr}
-\toprule
-Model & Imputation & AP & AP std & ROC-AUC & F1 (tuned thr.) \\
-\midrule
-Logistic regression & Most frequent & 0.7839 & 0.0032 & 0.9125 & 0.6992 \\
-                    & ``missing''   & 0.7864 & 0.0039 & 0.9136 & 0.7013 \\
-\midrule
-LightGBM            & Most frequent & 0.8307 & 0.0014 & 0.9289 & 0.7314 \\
-                    & ``missing''   & 0.8318 & 0.0020 & 0.9295 & 0.7313 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The gain is 0.003 AP for the logistic regression and 0.001 for LightGBM, with
-no change in F1 for LightGBM: of the order of the variation of AP across folds.
-Adopting it would have meant re-running the whole tuning for no measurable
-gain, so we kept the most-frequent imputation. A separate category remains the
-more principled choice for a model in production, because it does not invent a
-job for people who have none.
+people with a missing occupation earn \pos, against 23.9\% overall: they are
+mostly people without a job. The most-frequent imputation hides this, since it
+gives them the most common job (\code{Private}, \code{Prof-specialty}).
+Imputing a separate ``missing'' category keeps the information. On the untuned
+models (Table~\ref{tab:missing}, appendix), it gains 0.003 AP for the logistic
+regression and 0.001 for LightGBM, with no change in F1 for LightGBM: of the
+order of the variation of AP across folds. Adopting it would have meant
+re-running the whole tuning for no measurable gain, so we kept the
+most-frequent imputation. A separate category remains the more principled
+choice for a model in production, because it does not invent a job for people
+who have none.
 
 \subsection{Overfitting: what we checked and what we did not}
 \label{sec:overfitting}
-
-Overfitting can happen at two levels, and we did not check both equally well.
 
 \begin{itemize}
   \item \textbf{Overfitting the validation folds: checked.} The 95 Optuna
@@ -49,51 +28,42 @@ Overfitting can happen at two levels, and we did not check both equally well.
   CV scores are optimistic by construction. The untouched test set measures by
   how much: every model loses about 0.01 AP (logistic regression 0.784 to
   0.773, random forest 0.814 to 0.805, LightGBM 0.832 to 0.821), and the
-  ranking does not change (Section~\ref{sec:test}). This is the drop expected
-  from selection, not a sign that the models were fitted to the folds.
+  ranking does not change. This is the drop expected from selection.
   \item \textbf{Memorizing the training rows: checked for the logistic
-  regression only.} For the logistic regression we measured the train and
-  validation AP directly: the gap stays below 0.004 even with almost no
-  penalty (Section~\ref{sec:regularization}). For the two tree models we
-  never computed a training score, so we cannot say how far they fit their
-  training rows. The evidence is indirect. The untuned random forest, whose
-  leaves are pure, is the worst model (log-loss 0.446); limiting its depth and
-  leaf size raised its CV AP by 0.064, which is what reducing overfitting
-  looks like. LightGBM's 350 trees were chosen by CV rather than by early
-  stopping on a validation curve.
+  regression only.} Its train--validation gap stays below 0.004 even with
+  almost no penalty (Section~\ref{sec:regularization}). For the two tree
+  models we never computed a training score. The evidence is indirect: the
+  untuned random forest, whose leaves are pure, is the worst model, and
+  limiting its depth and leaf size raised its CV AP by 0.064, which is what
+  reducing overfitting looks like; LightGBM's 350 trees were chosen by CV
+  rather than by early stopping.
 \end{itemize}
-
-For tree ensembles, a training score above the validation score is normal and
-not a problem in itself: what matters is that the validation and test scores
-hold, and they do. We are therefore confident that overfitting does not hurt
-the results we report, but we did not measure its size for the random forest
-and LightGBM. A table of train, validation and test AP for the three models,
-and a LightGBM learning curve, would close this gap.
+For tree ensembles, a training score above the validation score is normal:
+what matters is that the validation and test scores hold, and they do. A table
+of train, validation and test AP for the three models, and a LightGBM learning
+curve, would measure the size of the gap.
 
 \subsection{Limitations}
 
 \begin{itemize}
-  \item \textbf{Overfitting of the tree models not measured directly}
-  (Section~\ref{sec:overfitting}).
-  \item \textbf{Old data.} The census dates from 1994. Incomes, jobs and the
-  meaning of the \$50K threshold have changed since, so the model would need to
-  be retrained on recent data before any use.
+  \item \textbf{Old data.} The census dates from 1994; incomes, jobs and the
+  meaning of \$50K have changed, so the model would need retraining on recent
+  data.
   \item \textbf{Possible leakage.} \code{capital-gain} and \code{capital-loss}
   are declared for the same tax year as the income (Section~\ref{sec:eda}).
-  \item \textbf{F1 stands in for business costs.} With real costs for a false
-  positive and a false negative, the threshold should minimize the expected
-  cost instead.
-  \item \textbf{Threshold chosen on fold models.} The threshold comes from the
+  \item \textbf{F1 stands in for business costs.} With real costs for each
+  type of error, the threshold should minimize the expected cost instead.
+  \item \textbf{Threshold chosen on fold models.} It comes from the
   out-of-fold probabilities of five models trained on 80\% of the development
-  set, and is applied to a model refitted on all of it. Their scores are close,
+  set, and is applied to a model refitted on all of it; their scores are close
   but not identical.
   \item \textbf{Probabilities not calibrated} as-is
-  (Section~\ref{sec:calibration}).
+  (Section~\ref{sec:calibration}), and overfitting of the tree models not
+  measured directly (Section~\ref{sec:overfitting}).
   \item \textbf{No fairness audit.} The model uses \code{sex} and \code{race}
-  as inputs, and the share of \pos{} is 30\% for men against 11\% for women in
-  the data. The fairness audit was removed from the scope, so we did not check
-  whether errors are spread equally across groups; this would be needed before
-  any real use.
+  as inputs, and the share of \pos{} is 30\% for men against 11\% for women.
+  The audit was removed from the scope, so we did not check whether errors are
+  spread equally across groups; this would be needed before any real use.
 \end{itemize}
 
 \subsection{Conclusion}

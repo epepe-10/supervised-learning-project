@@ -12,34 +12,25 @@ with one feature of each kind, each motivated by the analysis above.
   Figure~\ref{fig:eda-age} instead of a straight line.
   \item \code{education\_x\_hours} $= \text{education-num} \times
   \text{hours-per-week}$ (interaction). The value of an extra hour of work is
-  likely to depend on the level of education; the product lets the effect of
-  one feature depend on the other.
+  likely to depend on the level of education.
   \item \code{has\_capital} $= \mathbf{1}[\text{capital-gain} > 0 \text{ or }
   \text{capital-loss} > 0]$ (indicator). With more than 90\% of the amounts at
-  zero, owning capital at all is a cleaner signal than the raw, very skewed
-  amounts.
+  zero, owning capital at all is a cleaner signal than the raw, skewed amounts.
 \end{itemize}
 The three features only combine columns of the same row. They learn nothing
 from the data (no mean, no median, no target), so they cannot leak information
-from validation rows into training rows. They are computed inside the Pipeline,
-so they are recomputed for any new row the saved model scores.
+from validation rows into training rows. They are computed inside the
+Pipeline, so they are recomputed for any new row.
 
 \paragraph{What they bought.} On the untuned logistic regression (5-fold
 out-of-fold predictions, threshold 0.5), the three features raise ROC-AUC from
-0.905 to 0.913, AP from 0.763 to 0.784 and F1 from 0.657 to 0.673. This gain is
-about seven times the standard deviation of AP across folds (0.003). Tree models
-can learn such shapes by themselves, so we expected the features to matter
-mostly for the linear model; we kept them for all three models so that every
-model sees the same inputs. SHAP shows that LightGBM does use two of them
-(Section~\ref{sec:shap}): \code{education\_x\_hours} is its 5th most important
-feature, ahead of \code{education-num}, and \code{age\_squared} is 8th.
-\code{has\_capital} matters little (12th of 15), since the trees can split on
-\code{capital-gain} directly.
-
-Note that \code{age} and \code{age\_squared} are strongly correlated. With a
-regularized model this does not hurt the predictions, but the two features
-share the credit, so their coefficients and their SHAP values must be read
-together.
+0.905 to 0.913, AP from 0.763 to 0.784 and F1 from 0.657 to 0.673: about seven
+times the standard deviation of AP across folds (0.003). Tree models can learn
+such shapes by themselves; we kept the features for all three models so that
+every model sees the same inputs, and SHAP shows that LightGBM still uses two
+of them (Section~\ref{sec:shap}). \code{age} and \code{age\_squared} are
+strongly correlated: with a regularized model this does not hurt the
+predictions, but their coefficients and SHAP values must be read together.
 
 \subsection{Missing values and encoding}
 
@@ -47,18 +38,14 @@ All the steps below are learned on the training rows only, inside each
 cross-validation fold (Section~\ref{sec:pipeline}).
 \begin{itemize}
   \item \textbf{Categorical columns} (7): missing values are replaced by the
-  most frequent category of the training rows, then one-hot encoded: categories
-  are labels, not measurements, so each one gets its own column.
-  \code{handle\_unknown="ignore"} turns a category never seen in training into
-  a row of zeros instead of an error at prediction time.
-  \item \textbf{Numerical columns} (5 original and 3 engineered): missing values
-  are replaced by the training median, then standardized, $x \mapsto (x -
-  \mu)/\sigma$ with the training mean and standard deviation, which matters for
-  the regularized logistic regression. Adult has no missing numerical value,
-  but the imputer stays so that a new row with a missing number can still be
-  scored.
+  most frequent category, then one-hot encoded, since categories are labels,
+  not measurements. \code{handle\_unknown="ignore"} turns a category never seen
+  in training into a row of zeros instead of an error at prediction time.
+  \item \textbf{Numerical columns} (5 original and 3 engineered): median
+  imputation, then standardization $x \mapsto (x - \mu)/\sigma$, which matters
+  for the regularized logistic regression. Adult has no missing numerical
+  value, but the imputer stays so that a new row with a missing number can
+  still be scored.
 \end{itemize}
-After encoding, the model sees 91 columns (when fitted on the whole development
-set). Imputing the most frequent category is the simplest choice;
-Section~\ref{sec:discussion} shows that the missing job values are not random
-and tests a separate ``missing'' category instead.
+After encoding, the model sees 91 columns. Section~\ref{sec:discussion} tests a
+separate ``missing'' category instead of the most frequent one.

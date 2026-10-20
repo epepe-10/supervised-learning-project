@@ -9,20 +9,16 @@ people are positive. The task is therefore a binary classification on tabular
 data with an imbalanced target.
 
 The goal is a complete proof of concept, from the raw table to a tuned,
-explained and calibrated model evaluated on an untouched test set. The whole project follows one validation protocol. The data is split
-once into a development set (80\%) and a test set (20\%). Every decision
-(preprocessing, features, model, hyperparameters, imbalance remedy and decision
-threshold) is made with 5-fold stratified cross-validation on the development
-set only. The test set is used once, at the very end, to give an honest
-estimate of performance (Section~\ref{sec:test}).
+explained and calibrated model evaluated on an untouched test set. The whole
+project follows one validation protocol. The data is split once into a
+development set (80\%) and a test set (20\%). Every decision (preprocessing,
+features, model, hyperparameters, imbalance remedy and decision threshold) is
+made with 5-fold stratified cross-validation on the development set only. The
+test set is used once, at the very end (Section~\ref{sec:test}).
 
-The report follows the project requirements in order: exploratory analysis
-(Section~\ref{sec:eda}), feature engineering (Section~\ref{sec:features}), class
-imbalance (Section~\ref{sec:imbalance}), the progression from a linear model to
-gradient boosting (Section~\ref{sec:models}), the single scikit-learn Pipeline
-(Section~\ref{sec:pipeline}), tuning with Optuna (Section~\ref{sec:tuning}),
-experiment tracking with MLflow (Section~\ref{sec:tracking}), SHAP explanations
-(Section~\ref{sec:shap}) and calibration (Section~\ref{sec:calibration}). The
-fairness and bias audit (requirement 10) was removed from the scope of the
-project by the instructor, so it is not covered. The code, and the order in
-which to run the scripts, are described in the repository's \code{README.md}.
+The report follows the project requirements in order (Sections~\ref{sec:eda}
+to~\ref{sec:test}). The fairness and bias audit (requirement 10) was removed
+from the scope of the project by the instructor, so it is not covered. The
+code, and the order in which to run the scripts, are described in the
+repository's \code{README.md}. Supporting figures, tables and equations are in
+the appendix.
