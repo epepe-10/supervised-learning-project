@@ -51,7 +51,7 @@ logistic regression (Section~\ref{sec:features}). The untuned random forest is
 they memorize the training folds and the averaged probabilities are poorly
 calibrated. LightGBM is the best model on every metric: AP 0.831 (+0.047 over
 the logistic regression), ROC-AUC 0.929, log-loss 0.275 and F1 0.731. The gaps
-between models (at least 0.03 AP) are about ten times the variation of AP
+between models (at least 0.03 AP) are more than five times the variation of AP
 across folds (at most 0.006), so the ranking is not an artefact of the split.
 
 \subsection{Tuned models}
